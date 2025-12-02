@@ -5,9 +5,10 @@ namespace LoyaltyEngage\Message\Handler;
 use LoyaltyEngage\Message\ReturnMessage;
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-class ReturnMessageHandler implements MessageHandlerInterface
+#[AsMessageHandler]
+class ReturnMessageHandler
 {
     /**
      * @var LoyaltyEngageApiService

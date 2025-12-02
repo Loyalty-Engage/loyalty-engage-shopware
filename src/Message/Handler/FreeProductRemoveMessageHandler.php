@@ -5,9 +5,10 @@ namespace LoyaltyEngage\Message\Handler;
 use LoyaltyEngage\Message\FreeProductRemoveMessage;
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-class FreeProductRemoveMessageHandler implements MessageHandlerInterface
+#[AsMessageHandler]
+class FreeProductRemoveMessageHandler
 {
     /**
      * @var LoyaltyEngageApiService
