@@ -1,0 +1,22 @@
+{
+    "loyalty": {
+        "cart": {
+            "button": {
+                "text": "Mit Punkten einlösen",
+                "claim_discount": "10% Rabatt beanspruchen"
+            },
+            "success": {
+                "title": "Erfolg",
+                "added": "Produkt erfolgreich zum Treuepunkte-Warenkorb hinzugefügt.",
+                "discount_claimed": "Rabatt erfolgreich beansprucht."
+            },
+            "error": {
+                "title": "Fehler",
+                "general": "Bei der Verarbeitung Ihrer Anfrage ist ein Fehler aufgetreten.",
+                "not-eligible": "Sie sind nicht berechtigt, dieses Produkt mit Punkten einzulösen.",
+                "not-available": "Dieses Produkt ist nicht für die Einlösung mit Punkten verfügbar.",
+                "discount_failed": "Rabatt konnte nicht beansprucht werden."
+            }
+        }
+    }
+}

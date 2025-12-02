@@ -1,0 +1,59 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Create plugin ZIP
+      run: |
+        # Remove unnecessary files
+        rm -rf .git .github .DS_Store
+        
+        # Create ZIP with correct structure
+        cd ..
+        zip -r LoyaltyEngage-${{ steps.get_version.outputs.VERSION }}.zip LoyaltyEngage \
+          -x "*.git*" \
+          -x "*node_modules*" \
+          -x "*.DS_Store" \
+          -x "*vendor*" \
+          -x "*.idea*" \
+          -x "*.vscode*"
+        
+        # Also create a generic LoyaltyEngage.zip for easy installation
+        cp LoyaltyEngage-${{ steps.get_version.outputs.VERSION }}.zip LoyaltyEngage.zip
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ../LoyaltyEngage-${{ steps.get_version.outputs.VERSION }}.zip
+          ../LoyaltyEngage.zip
+        body: |
+          ## Installation
+          
+          Download `LoyaltyEngage.zip` and upload it via Shopware Admin Panel:
+          **Extensions > My Extensions > Upload extension**
+          
+          For detailed installation instructions, see [INSTALLATION.md](https://github.com/Loyalty-Engage/loyalty-engage-shopware/blob/main/INSTALLATION.md)
+          
+          ## What's Changed
+          
+          See the [commit history](https://github.com/Loyalty-Engage/loyalty-engage-shopware/commits/v${{ steps.get_version.outputs.VERSION }}) for details.
+          
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

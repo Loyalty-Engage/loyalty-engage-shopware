@@ -1,0 +1,113 @@
+<?xml version="1.0" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <!-- API Service -->
+        <service id="LoyaltyEngage\Service\LoyaltyEngageApiService">
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+            <argument type="service" id="Symfony\Contracts\HttpClient\HttpClientInterface"/>
+            <argument type="service" id="logger"/>
+        </service>
+
+        <!-- Cart Service -->
+        <service id="LoyaltyEngage\Service\LoyaltyCartService">
+            <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\CartPersister"/>
+            <argument type="service" id="product.repository"/>
+            <argument type="service" id="promotion.repository"/>
+            <argument type="service" id="promotion_discount.repository"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+        </service>
+
+        <!-- API Controller -->
+        <service id="LoyaltyEngage\Controller\Api\LoyaltyCartController" public="true">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyCartService"/>
+            <tag name="controller.service_arguments"/>
+        </service>
+
+        <!-- Message Handlers -->
+        <service id="LoyaltyEngage\Message\Handler\PurchaseMessageHandler">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+            <tag name="messenger.message_handler"/>
+        </service>
+
+        <service id="LoyaltyEngage\Message\Handler\ReturnMessageHandler">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+            <tag name="messenger.message_handler"/>
+        </service>
+
+        <service id="LoyaltyEngage\Message\Handler\FreeProductPurchaseMessageHandler">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+            <tag name="messenger.message_handler"/>
+        </service>
+
+        <service id="LoyaltyEngage\Message\Handler\FreeProductRemoveMessageHandler">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+            <tag name="messenger.message_handler"/>
+        </service>
+
+        <!-- Event Subscribers -->
+        <service id="LoyaltyEngage\Subscriber\PurchaseSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="order.repository"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="messenger.bus.shopware"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="LoyaltyEngage\Subscriber\ReturnSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="order_delivery.repository"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="messenger.bus.shopware"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="LoyaltyEngage\Subscriber\FreeProductPurchaseSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="order.repository"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="messenger.bus.shopware"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="LoyaltyEngage\Subscriber\FreeProductRemoveSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="messenger.bus.shopware"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <!-- Scheduled Tasks -->
+        <service id="LoyaltyEngage\Scheduled\CartExpiryTask">
+            <tag name="shopware.scheduled.task" />
+        </service>
+
+        <service id="LoyaltyEngage\Scheduled\CartExpiryTaskHandler">
+            <argument type="service" id="scheduled_task.repository" />
+            <argument type="service" id="order.repository" />
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
+            <argument type="service" id="logger" />
+            <tag name="messenger.message_handler" />
+        </service>
+
+        <service id="LoyaltyEngage\Scheduled\OrderPlaceTask">
+            <tag name="shopware.scheduled.task" />
+        </service>
+
+        <service id="LoyaltyEngage\Scheduled\OrderPlaceTaskHandler">
+            <argument type="service" id="scheduled_task.repository" />
+            <argument type="service" id="order.repository" />
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
+            <argument type="service" id="logger" />
+            <tag name="messenger.message_handler" />
+        </service>
+    </services>
+</container>

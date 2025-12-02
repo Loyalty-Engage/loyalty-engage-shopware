@@ -1,0 +1,32 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Composer
+/vendor/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build artifacts
+/src/Resources/app/storefront/dist/
+/src/Resources/app/administration/dist/
+
+# Test files
+/tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.bak
+*.log

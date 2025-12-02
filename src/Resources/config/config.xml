@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/platform/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
+    <card>
+        <title>Loyalty Cart Configuration</title>
+        <input-field type="url">
+            <name>loyaltyApiUrl</name>
+            <label>Loyalty API URL</label>
+            <helpText>Please ensure the URL starts with "https://app.loyaltyengage.tech".</helpText>
+            <placeholder>https://app.loyaltyengage.tech</placeholder>
+            <defaultValue>https://app.loyaltyengage.tech</defaultValue>
+            <required>true</required>
+        </input-field>
+        
+        <input-field type="password">
+            <name>tenantId</name>
+            <label>Client ID</label>
+            <required>true</required>
+        </input-field>
+        
+        <input-field type="password">
+            <name>bearerToken</name>
+            <label>Client Secret</label>
+            <required>true</required>
+        </input-field>
+        
+        <input-field type="single-select">
+            <name>cartExpiryTime</name>
+            <label>Cart Expiry Time</label>
+            <options>
+                <option>
+                    <id>1</id>
+                    <name>1 Hour</name>
+                </option>
+                <option>
+                    <id>2</id>
+                    <name>2 Hours</name>
+                </option>
+                <option>
+                    <id>4</id>
+                    <name>4 Hours</name>
+                </option>
+                <option>
+                    <id>8</id>
+                    <name>8 Hours</name>
+                </option>
+                <option>
+                    <id>24</id>
+                    <name>24 Hours</name>
+                </option>
+            </options>
+            <defaultValue>1</defaultValue>
+        </input-field>
+        
+        <input-field type="bool">
+            <name>loggerEnable</name>
+            <label>Enable Logging</label>
+            <defaultValue>false</defaultValue>
+        </input-field>
+        
+        <input-field type="int">
+            <name>loyaltyOrderRetrieveLimit</name>
+            <label>Loyalty Order Retrieve Limit</label>
+            <defaultValue>5</defaultValue>
+            <min>1</min>
+            <max>10</max>
+        </input-field>
+    </card>
+    
+    <card>
+        <title>Loyalty Export Settings</title>
+        <input-field type="bool">
+            <name>returnEvent</name>
+            <label>Return Export</label>
+            <defaultValue>false</defaultValue>
+        </input-field>
+        
+        <input-field type="bool">
+            <name>purchaseEvent</name>
+            <label>Purchase Export</label>
+            <defaultValue>false</defaultValue>
+        </input-field>
+    </card>
+</config>

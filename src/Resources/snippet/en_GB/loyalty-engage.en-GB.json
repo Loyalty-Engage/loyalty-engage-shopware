@@ -1,0 +1,22 @@
+{
+    "loyalty": {
+        "cart": {
+            "button": {
+                "text": "Redeem with Points",
+                "claim_discount": "Claim 10% Discount"
+            },
+            "success": {
+                "title": "Success",
+                "added": "Product added to loyalty cart successfully.",
+                "discount_claimed": "Discount claimed successfully."
+            },
+            "error": {
+                "title": "Error",
+                "general": "An error occurred while processing your request.",
+                "not-eligible": "You are not eligible to redeem this product with points.",
+                "not-available": "This product is not available for redemption with points.",
+                "discount_failed": "Failed to claim discount."
+            }
+        }
+    }
+}

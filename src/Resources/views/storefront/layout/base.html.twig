@@ -1,0 +1,7 @@
+{% sw_extends '@Storefront/layout/base.html.twig' %}
+
+{% block layout_head_javascript %}
+    {{ parent() }}
+
+    <script src="{{ asset('bundles/loyaltyengage/storefront/js/custom-header.js') }}"></script>
+{% endblock %}

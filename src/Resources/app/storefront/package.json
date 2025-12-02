@@ -1,0 +1,11 @@
+{
+  "name": "loyalty-engage-storefront",
+  "version": "1.0.0",
+  "description": "Storefront assets for LoyaltyEngage Shopware plugin",
+  "main": "src/main.js",
+  "author": "LoyaltyEngage",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {}
+}

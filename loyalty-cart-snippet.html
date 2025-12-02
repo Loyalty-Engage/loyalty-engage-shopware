@@ -1,0 +1,50 @@
+<!-- LoyaltyEngage Cart Button Snippet -->
+<!-- Copy and paste this snippet into your CMS element or HTML content -->
+<!-- Replace PRODUCT-ID-HERE with your actual product ID -->
+
+<div style="font-family: Arial, sans-serif; padding: 15px; border: 1px solid #ddd; border-radius: 5px; max-width: 300px;">
+    <h3 style="margin-top: 0;">Redeem with Loyalty Points</h3>
+    <p>Use your loyalty points to get this product for free!</p>
+    <button 
+        id="loyaltyButton" 
+        style="background-color: #6c2eb9; color: white; border: none; border-radius: 4px; padding: 10px 15px; cursor: pointer; font-weight: bold; width: 100%;"
+        onclick="redeemWithLoyaltyPoints('PRODUCT-ID-HERE')">
+        Redeem Now
+    </button>
+    <div id="loyaltyMessage" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
+</div>
+
+<script>
+    function redeemWithLoyaltyPoints(productId) {
+        // Get message element
+        const messageEl = document.getElementById('loyaltyMessage');
+        
+        // Check if the global function exists
+        if (typeof window.addProductToLoyaltyCart === 'function') {
+            // Call the global function
+            window.addProductToLoyaltyCart(productId, function(success, message) {
+                // Show message
+                messageEl.textContent = message;
+                
+                if (success) {
+                    messageEl.style.backgroundColor = '#d4edda';
+                    messageEl.style.color = '#155724';
+                    messageEl.style.border = '1px solid #c3e6cb';
+                } else {
+                    messageEl.style.backgroundColor = '#f8d7da';
+                    messageEl.style.color = '#721c24';
+                    messageEl.style.border = '1px solid #f5c6cb';
+                }
+                
+                messageEl.style.display = 'block';
+            });
+        } else {
+            // Show error message
+            messageEl.textContent = 'LoyaltyEngage plugin is not loaded.';
+            messageEl.style.backgroundColor = '#f8d7da';
+            messageEl.style.color = '#721c24';
+            messageEl.style.border = '1px solid #f5c6cb';
+            messageEl.style.display = 'block';
+        }
+    }
+</script>

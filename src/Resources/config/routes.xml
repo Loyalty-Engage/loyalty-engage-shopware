@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<routes xmlns="http://symfony.com/schema/routing"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://symfony.com/schema/routing
+        https://symfony.com/schema/routing/routing-1.0.xsd">
+
+    <route id="api.action.loyalty.cart.add" path="/api/v{version}/loyalty/shop/{email}/cart/add" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::addProductApi</default>
+    </route>
+    
+    <route id="api.action.loyalty.cart.remove" path="/api/v{version}/loyalty/shop/{email}/cart/remove" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::removeProductApi</default>
+    </route>
+    
+    <route id="api.action.loyalty.cart.remove.all" path="/api/v{version}/loyalty/shop/{email}/cart" methods="DELETE">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::removeAllProductsApi</default>
+    </route>
+    
+    <route id="api.action.loyalty.cart.claim.discount" path="/api/v{version}/loyalty/shop/{email}/cart/claim-discount" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::claimDiscountApi</default>
+    </route>
+</routes>

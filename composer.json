@@ -1,0 +1,31 @@
+{
+    "name": "loyalty-engage/loyalty-shop",
+    "description": "Shopware 6 plugin to add products to cart based on loyalty points",
+    "type": "shopware-platform-plugin",
+    "version": "1.0.0",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "LoyaltyEngage"
+        }
+    ],
+    "require": {
+        "shopware/core": ">=6.4.0"
+    },
+    "extra": {
+        "shopware-plugin-class": "LoyaltyEngage\\LoyaltyEngage",
+        "label": {
+            "en-GB": "Loyalty Engage Shop",
+            "de-DE": "Loyalty Engage Shop"
+        },
+        "description": {
+            "en-GB": "Add products to cart based on loyalty points",
+            "de-DE": "Produkte basierend auf Treuepunkten zum Warenkorb hinzufügen"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "LoyaltyEngage\\": "src/"
+        }
+    }
+}

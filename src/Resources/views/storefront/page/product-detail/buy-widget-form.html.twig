@@ -1,0 +1,32 @@
+{% sw_extends '@Storefront/storefront/page/product-detail/buy-widget-form.html.twig' %}
+
+{% block page_product_detail_buy_form_inner %}
+    {{ parent() }}
+
+    {% if page.product.available %}
+        <div class="loyalty-cart-button-container" data-loyalty-cart-plugin>
+            <button type="button"
+                    class="btn btn-block btn-primary loyalty-add-to-cart-button mb-2"
+                    data-product-id="{{ page.product.id }}">
+                {{ "loyalty.cart.button.text"|trans|sw_sanitize }}
+            </button>
+            
+            <button type="button"
+                    class="btn btn-block btn-secondary loyalty-claim-discount-button"
+                    data-product-id="{{ page.product.id }}"
+                    data-discount="0.1">
+                {{ "loyalty.cart.button.claim_discount"|trans|sw_sanitize }}
+            </button>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block page_product_detail_buy_form_after %}
+    {{ parent() }}
+
+    {% if context.customer %}
+        <script>
+            window.loyaltyCustomerEmail = "{{ context.customer.email|e('js') }}";
+        </script>
+    {% endif %}
+{% endblock %}

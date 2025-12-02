@@ -1,0 +1,17 @@
+.loyalty-add-to-cart-button {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    background-color: #7c4dff;
+    border-color: #7c4dff;
+    
+    &:hover {
+        background-color: #651fff;
+        border-color: #651fff;
+    }
+    
+    &:focus, &:active {
+        background-color: #6200ea;
+        border-color: #6200ea;
+        box-shadow: 0 0 0 0.2rem rgba(124, 77, 255, 0.25);
+    }
+}

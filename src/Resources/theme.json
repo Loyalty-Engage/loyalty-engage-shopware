@@ -1,0 +1,9 @@
+{
+  "name": "LoyaltyCart",
+  "author": "Your Name",
+  "views": ["@Storefront"],
+  "style": [],
+  "script": [
+    "app/storefront/dist/loyaltycart.js"
+  ]
+}

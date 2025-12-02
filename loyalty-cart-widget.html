@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loyalty Cart Widget</title>
+    <style>
+        .loyalty-widget {
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-width: 300px;
+        }
+        .loyalty-button {
+            background-color: #6c2eb9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .loyalty-button:hover {
+            background-color: #551e96;
+        }
+        .loyalty-message {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            display: none;
+        }
+        .loyalty-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .loyalty-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="loyalty-widget">
+        <h3>Redeem with Loyalty Points</h3>
+        <p>Use your loyalty points to get this product for free!</p>
+        <button class="loyalty-button" id="loyaltyButton">Redeem Now</button>
+        <div id="loyaltyMessage" class="loyalty-message"></div>
+    </div>
+
+    <script>
+        (function() {
+            // Get the product ID from the URL parameter or data attribute
+            function getProductId() {
+                // Try to get from URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('productId')) {
+                    return urlParams.get('productId');
+                }
+                
+                // Try to get from data attribute on the script tag
+                const scripts = document.getElementsByTagName('script');
+                const currentScript = scripts[scripts.length - 1];
+                if (currentScript.hasAttribute('data-product-id')) {
+                    return currentScript.getAttribute('data-product-id');
+                }
+                
+                // Default product ID (for testing)
+                return 'DEFAULT-PRODUCT-ID';
+            }
+            
+            // Show message
+            function showMessage(type, text) {
+                const messageEl = document.getElementById('loyaltyMessage');
+                messageEl.textContent = text;
+                messageEl.className = 'loyalty-message ' + type;
+                messageEl.style.display = 'block';
+            }
+            
+            // Add click event to the button
+            document.getElementById('loyaltyButton').addEventListener('click', function() {
+                const productId = getProductId();
+                
+                // Check if the global function exists
+                if (typeof window.addProductToLoyaltyCart === 'function') {
+                    // Call the global function
+                    window.addProductToLoyaltyCart(productId, function(success, message) {
+                        if (success) {
+                            showMessage('success', message);
+                        } else {
+                            showMessage('error', message);
+                        }
+                    });
+                } else {
+                    showMessage('error', 'LoyaltyEngage plugin is not loaded.');
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
