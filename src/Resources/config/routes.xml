@@ -22,15 +22,9 @@
     
     <route id="api.action.loyalty_engage.customer.update" path="/api/_action/loyalty-engage/customer/update" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\CustomerLoyaltyController::updateCustomerLoyalty</default>
-        <default key="_routeScope">
-            <default>api</default>
-        </default>
     </route>
     
     <route id="api.action.loyalty_engage.customer.get" path="/api/_action/loyalty-engage/customer/get" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\CustomerLoyaltyController::getCustomerLoyalty</default>
-        <default key="_routeScope">
-            <default>api</default>
-        </default>
     </route>
 </routes>
