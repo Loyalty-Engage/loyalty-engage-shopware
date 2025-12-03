@@ -1,0 +1,13 @@
+api.action.loyalty_engage.customer.update:
+    path: /api/_action/loyalty-engage/customer/update
+    methods: [POST]
+    defaults:
+        _controller: LoyaltyEngage\Controller\Api\CustomerLoyaltyController::updateCustomerLoyalty
+        _routeScope: ['api']
+
+api.action.loyalty_engage.customer.get:
+    path: /api/_action/loyalty-engage/customer/get
+    methods: [POST]
+    defaults:
+        _controller: LoyaltyEngage\Controller\Api\CustomerLoyaltyController::getCustomerLoyalty
+        _routeScope: ['api']

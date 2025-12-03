@@ -9,7 +9,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route(defaults: ['_routeScope' => ['api']])]
+/**
+ * @Route(defaults={"_routeScope"={"api"}})
+ */
 class CustomerLoyaltyController extends AbstractController
 {
     /**
@@ -27,7 +29,7 @@ class CustomerLoyaltyController extends AbstractController
 
     /**
      * Update customer loyalty data by email
-     *
+     * 
      * @Route("/api/_action/loyalty-engage/customer/update", name="api.action.loyalty_engage.customer.update", methods={"POST"})
      */
     public function updateCustomerLoyalty(Request $request, Context $context): JsonResponse
@@ -57,7 +59,7 @@ class CustomerLoyaltyController extends AbstractController
 
     /**
      * Get customer loyalty data by email
-     *
+     * 
      * @Route("/api/_action/loyalty-engage/customer/get", name="api.action.loyalty_engage.customer.get", methods={"POST"})
      */
     public function getCustomerLoyalty(Request $request, Context $context): JsonResponse

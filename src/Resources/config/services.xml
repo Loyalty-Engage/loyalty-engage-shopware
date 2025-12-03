@@ -96,6 +96,19 @@
             <tag name="kernel.event_subscriber"/>
         </service>
 
+        <!-- Rule Conditions -->
+        <service id="LoyaltyEngage\Core\Rule\CustomerTierRule">
+            <tag name="shopware.rule.definition"/>
+        </service>
+
+        <service id="LoyaltyEngage\Core\Rule\CustomerPointsRule">
+            <tag name="shopware.rule.definition"/>
+        </service>
+
+        <service id="LoyaltyEngage\Core\Rule\CustomerCoinsRule">
+            <tag name="shopware.rule.definition"/>
+        </service>
+
         <!-- Scheduled Tasks -->
         <service id="LoyaltyEngage\Scheduled\CartExpiryTask">
             <tag name="shopware.scheduled.task" />
