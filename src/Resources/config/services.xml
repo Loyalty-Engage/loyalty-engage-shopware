@@ -30,6 +30,9 @@
 
         <service id="LoyaltyEngage\Controller\Api\CustomerLoyaltyController" public="true">
             <argument type="service" id="LoyaltyEngage\Service\CustomerLoyaltyService"/>
+            <call method="setContainer">
+                <argument type="service" id="service_container"/>
+            </call>
             <tag name="controller.service_arguments"/>
         </service>
 
