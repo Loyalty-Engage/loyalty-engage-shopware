@@ -1,0 +1,27 @@
+{
+    "sw-rule": {
+        "detail": {
+            "conditions": {
+                "loyaltyEngageCustomerTier": "Kundenstufe (Loyalty Engage)",
+                "loyaltyEngageCustomerPoints": "Kundenpunkte (Loyalty Engage)",
+                "loyaltyEngageCustomerCoins": "Kundenmünzen (Loyalty Engage)"
+            }
+        }
+    },
+    "loyalty-engage": {
+        "rule": {
+            "customerTier": {
+                "label": "Kundenstufe",
+                "tier": "Stufenwert"
+            },
+            "customerPoints": {
+                "label": "Kundenpunkte",
+                "points": "Punktewert"
+            },
+            "customerCoins": {
+                "label": "Kundenmünzen",
+                "coins": "Münzwert"
+            }
+        }
+    }
+}

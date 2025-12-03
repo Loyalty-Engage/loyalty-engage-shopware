@@ -1,0 +1,27 @@
+{
+    "sw-rule": {
+        "detail": {
+            "conditions": {
+                "loyaltyEngageCustomerTier": "Customer Tier (Loyalty Engage)",
+                "loyaltyEngageCustomerPoints": "Customer Points (Loyalty Engage)",
+                "loyaltyEngageCustomerCoins": "Customer Coins (Loyalty Engage)"
+            }
+        }
+    },
+    "loyalty-engage": {
+        "rule": {
+            "customerTier": {
+                "label": "Customer Tier",
+                "tier": "Tier value"
+            },
+            "customerPoints": {
+                "label": "Customer Points",
+                "points": "Points value"
+            },
+            "customerCoins": {
+                "label": "Customer Coins",
+                "coins": "Coins value"
+            }
+        }
+    }
+}
