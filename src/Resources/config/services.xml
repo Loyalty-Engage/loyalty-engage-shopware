@@ -22,10 +22,21 @@
             <argument type="service" id="logger"/>
         </service>
 
-        <!-- API Controller -->
+        <!-- API Controllers -->
         <service id="LoyaltyEngage\Controller\Api\LoyaltyCartController" public="true">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyCartService"/>
             <tag name="controller.service_arguments"/>
+        </service>
+
+        <service id="LoyaltyEngage\Controller\Api\CustomerLoyaltyController" public="true">
+            <argument type="service" id="LoyaltyEngage\Service\CustomerLoyaltyService"/>
+            <tag name="controller.service_arguments"/>
+        </service>
+
+        <!-- Customer Loyalty Service -->
+        <service id="LoyaltyEngage\Service\CustomerLoyaltyService">
+            <argument type="service" id="customer.repository"/>
+            <argument type="service" id="logger"/>
         </service>
 
         <!-- Message Handlers -->
