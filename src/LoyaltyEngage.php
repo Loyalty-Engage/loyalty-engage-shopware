@@ -5,10 +5,13 @@ namespace LoyaltyEngage;
 use Shopware\Core\Framework\Plugin;
 use Shopware\Core\Framework\Plugin\Context\InstallContext;
 use Shopware\Core\Framework\Plugin\Context\UninstallContext;
+use Shopware\Core\Framework\Plugin\Context\UpdateContext;
+use Shopware\Core\Framework\Plugin\Context\ActivateContext;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Doctrine\DBAL\Connection;
+
 class LoyaltyEngage extends Plugin
 {
     /**
@@ -20,6 +23,28 @@ class LoyaltyEngage extends Plugin
 
         // Add custom fields to order entity for tracking loyalty order status
         $this->addCustomFields($installContext);
+    }
+
+    /**
+     * @param UpdateContext $updateContext
+     */
+    public function update(UpdateContext $updateContext): void
+    {
+        parent::update($updateContext);
+
+        // Update custom field labels on plugin update
+        $this->updateCustomFieldLabels($updateContext->getContext());
+    }
+
+    /**
+     * @param ActivateContext $activateContext
+     */
+    public function activate(ActivateContext $activateContext): void
+    {
+        parent::activate($activateContext);
+
+        // Update custom field labels on plugin activation
+        $this->updateCustomFieldLabels($activateContext->getContext());
     }
 
     /**
@@ -195,6 +220,65 @@ class LoyaltyEngage extends Plugin
                 ],
             ],
         ], $installContext->getContext());
+    }
+
+    /**
+     * Update custom field labels for existing fields
+     */
+    private function updateCustomFieldLabels($context): void
+    {
+        $customFieldRepository = $this->container->get('custom_field.repository');
+
+        // Define the labels for each custom field
+        $fieldLabels = [
+            'le_current_tier' => [
+                'en-GB' => 'Current Tier',
+                'de-DE' => 'Aktuelle Stufe',
+            ],
+            'le_points' => [
+                'en-GB' => 'Loyalty Points',
+                'de-DE' => 'Treuepunkte',
+            ],
+            'le_available_coins' => [
+                'en-GB' => 'Available Coins',
+                'de-DE' => 'Verfügbare Münzen',
+            ],
+            'le_next_tier' => [
+                'en-GB' => 'Next Tier',
+                'de-DE' => 'Nächste Stufe',
+            ],
+            'le_points_to_next_tier' => [
+                'en-GB' => 'Points to Next Tier',
+                'de-DE' => 'Punkte bis zur nächsten Stufe',
+            ],
+            'loyalty_order_place' => [
+                'en-GB' => 'Loyalty Order Placed',
+                'de-DE' => 'Loyalty Bestellung Platziert',
+            ],
+            'loyalty_order_place_retrieve' => [
+                'en-GB' => 'Loyalty Order Retrieve Count',
+                'de-DE' => 'Loyalty Bestellung Abrufzähler',
+            ],
+        ];
+
+        foreach ($fieldLabels as $fieldName => $labels) {
+            $criteria = new Criteria();
+            $criteria->addFilter(new EqualsFilter('name', $fieldName));
+            $customFields = $customFieldRepository->search($criteria, $context);
+
+            if ($customFields->count() > 0) {
+                $customField = $customFields->first();
+                $config = $customField->getConfig() ?? [];
+                $config['label'] = $labels;
+
+                $customFieldRepository->update([
+                    [
+                        'id' => $customField->getId(),
+                        'config' => $config,
+                    ],
+                ], $context);
+            }
+        }
     }
 
     /**
