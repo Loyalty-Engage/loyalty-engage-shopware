@@ -8,6 +8,34 @@
             }
         }
     },
+    "sw-settings-custom-field": {
+        "customField": {
+            "le_current_tier": "Current Tier",
+            "le_points": "Loyalty Points",
+            "le_available_coins": "Available Coins",
+            "le_next_tier": "Next Tier",
+            "le_points_to_next_tier": "Points to Next Tier",
+            "loyalty_order_place": "Loyalty Order Placed",
+            "loyalty_order_place_retrieve": "Loyalty Order Retrieve Count"
+        }
+    },
+    "global": {
+        "sw-condition": {
+            "condition": {
+                "field": {
+                    "le_current_tier": "Current Tier",
+                    "le_points": "Loyalty Points",
+                    "le_available_coins": "Available Coins",
+                    "le_next_tier": "Next Tier",
+                    "le_points_to_next_tier": "Points to Next Tier"
+                }
+            }
+        },
+        "entities": {
+            "loyalty_engage_customer_fields": "Loyalty Engage Customer Data",
+            "loyalty_engage_fields": "Loyalty Engage Fields"
+        }
+    },
     "loyalty-engage": {
         "rule": {
             "customerTier": {

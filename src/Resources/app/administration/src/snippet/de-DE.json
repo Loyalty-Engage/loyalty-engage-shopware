@@ -8,6 +8,34 @@
             }
         }
     },
+    "sw-settings-custom-field": {
+        "customField": {
+            "le_current_tier": "Aktuelle Stufe",
+            "le_points": "Treuepunkte",
+            "le_available_coins": "Verfügbare Münzen",
+            "le_next_tier": "Nächste Stufe",
+            "le_points_to_next_tier": "Punkte bis zur nächsten Stufe",
+            "loyalty_order_place": "Loyalty Bestellung Platziert",
+            "loyalty_order_place_retrieve": "Loyalty Bestellung Abrufzähler"
+        }
+    },
+    "global": {
+        "sw-condition": {
+            "condition": {
+                "field": {
+                    "le_current_tier": "Aktuelle Stufe",
+                    "le_points": "Treuepunkte",
+                    "le_available_coins": "Verfügbare Münzen",
+                    "le_next_tier": "Nächste Stufe",
+                    "le_points_to_next_tier": "Punkte bis zur nächsten Stufe"
+                }
+            }
+        },
+        "entities": {
+            "loyalty_engage_customer_fields": "Loyalty Engage Kundendaten",
+            "loyalty_engage_fields": "Loyalty Engage Felder"
+        }
+    },
     "loyalty-engage": {
         "rule": {
             "customerTier": {
