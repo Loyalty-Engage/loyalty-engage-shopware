@@ -23,6 +23,12 @@ class LoyaltyEngage extends Plugin
 
         // Add custom fields to order entity for tracking loyalty order status
         $this->addCustomFields($installContext);
+        
+        // Ensure custom field labels are set correctly after install
+        $this->updateCustomFieldLabels($installContext->getContext());
+        
+        // Also update custom field set labels
+        $this->updateCustomFieldSetLabels($installContext->getContext());
     }
 
     /**
@@ -34,6 +40,7 @@ class LoyaltyEngage extends Plugin
 
         // Update custom field labels on plugin update
         $this->updateCustomFieldLabels($updateContext->getContext());
+        $this->updateCustomFieldSetLabels($updateContext->getContext());
     }
 
     /**
@@ -45,6 +52,7 @@ class LoyaltyEngage extends Plugin
 
         // Update custom field labels on plugin activation
         $this->updateCustomFieldLabels($activateContext->getContext());
+        $this->updateCustomFieldSetLabels($activateContext->getContext());
     }
 
     /**
@@ -274,6 +282,45 @@ class LoyaltyEngage extends Plugin
                 $customFieldRepository->update([
                     [
                         'id' => $customField->getId(),
+                        'config' => $config,
+                    ],
+                ], $context);
+            }
+        }
+    }
+
+    /**
+     * Update custom field set labels for existing sets
+     */
+    private function updateCustomFieldSetLabels($context): void
+    {
+        $customFieldSetRepository = $this->container->get('custom_field_set.repository');
+
+        // Define the labels for each custom field set
+        $setLabels = [
+            'loyalty_engage_fields' => [
+                'en-GB' => 'Loyalty Engage Fields',
+                'de-DE' => 'Loyalty Engage Felder',
+            ],
+            'loyalty_engage_customer_fields' => [
+                'en-GB' => 'Loyalty Engage Customer Data',
+                'de-DE' => 'Loyalty Engage Kundendaten',
+            ],
+        ];
+
+        foreach ($setLabels as $setName => $labels) {
+            $criteria = new Criteria();
+            $criteria->addFilter(new EqualsFilter('name', $setName));
+            $customFieldSets = $customFieldSetRepository->search($criteria, $context);
+
+            if ($customFieldSets->count() > 0) {
+                $customFieldSet = $customFieldSets->first();
+                $config = $customFieldSet->getConfig() ?? [];
+                $config['label'] = $labels;
+
+                $customFieldSetRepository->update([
+                    [
+                        'id' => $customFieldSet->getId(),
                         'config' => $config,
                     ],
                 ], $context);
