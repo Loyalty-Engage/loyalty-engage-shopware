@@ -5,7 +5,7 @@ namespace LoyaltyEngage\Scheduled;
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\RangeFilter;
@@ -15,7 +15,7 @@ use Psr\Log\LoggerInterface;
 class OrderPlaceTaskHandler extends ScheduledTaskHandler
 {
     /**
-     * @var EntityRepositoryInterface
+     * @var EntityRepository
      */
     private $orderRepository;
 
@@ -30,14 +30,14 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
     private $logger;
 
     /**
-     * @param EntityRepositoryInterface $scheduledTaskRepository
-     * @param EntityRepositoryInterface $orderRepository
+     * @param EntityRepository $scheduledTaskRepository
+     * @param EntityRepository $orderRepository
      * @param LoyaltyEngageApiService $loyaltyEngageApiService
      * @param LoggerInterface $logger
      */
     public function __construct(
-        EntityRepositoryInterface $scheduledTaskRepository,
-        EntityRepositoryInterface $orderRepository,
+        EntityRepository $scheduledTaskRepository,
+        EntityRepository $orderRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {

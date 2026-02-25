@@ -2,14 +2,7 @@
 
 namespace LoyaltyEngage\Scheduled;
 
-use LoyaltyEngage\Service\LoyaltyEngageApiService;
-use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
-use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
-use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
-use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
-use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\RangeFilter;
 use Shopware\Core\Framework\MessageQueue\ScheduledTask\ScheduledTask;
-use Psr\Log\LoggerInterface;
 
 class CartExpiryTask extends ScheduledTask
 {

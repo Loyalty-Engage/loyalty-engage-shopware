@@ -11,7 +11,7 @@ use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\Validation\DataBag\RequestDataBag;
@@ -34,17 +34,17 @@ class LoyaltyCartService
     private $cartPersister;
 
     /**
-     * @var EntityRepositoryInterface
+     * @var EntityRepository
      */
     private $productRepository;
 
     /**
-     * @var EntityRepositoryInterface
+     * @var EntityRepository
      */
     private $promotionRepository;
 
     /**
-     * @var EntityRepositoryInterface
+     * @var EntityRepository
      */
     private $promotionDiscountRepository;
 
@@ -61,18 +61,18 @@ class LoyaltyCartService
     /**
      * @param CartService $cartService
      * @param CartPersister $cartPersister
-     * @param EntityRepositoryInterface $productRepository
-     * @param EntityRepositoryInterface $promotionRepository
-     * @param EntityRepositoryInterface $promotionDiscountRepository
+     * @param EntityRepository $productRepository
+     * @param EntityRepository $promotionRepository
+     * @param EntityRepository $promotionDiscountRepository
      * @param LoyaltyEngageApiService $loyaltyEngageApiService
      * @param LoggerInterface $logger
      */
     public function __construct(
         CartService $cartService,
         CartPersister $cartPersister,
-        EntityRepositoryInterface $productRepository,
-        EntityRepositoryInterface $promotionRepository,
-        EntityRepositoryInterface $promotionDiscountRepository,
+        EntityRepository $productRepository,
+        EntityRepository $promotionRepository,
+        EntityRepository $promotionDiscountRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {
