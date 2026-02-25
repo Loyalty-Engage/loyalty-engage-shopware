@@ -4,27 +4,59 @@
         xsi:schemaLocation="http://symfony.com/schema/routing
         https://symfony.com/schema/routing/routing-1.0.xsd">
 
+    <!-- Store API routes for frontend (customer session auth) -->
+    <route id="store-api.loyalty.cart.add" path="/store-api/loyalty/cart/add" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::addProductApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+    
+    <route id="store-api.loyalty.cart.remove" path="/store-api/loyalty/cart/remove" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::removeProductApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+    
+    <route id="store-api.loyalty.cart.remove.all" path="/store-api/loyalty/cart" methods="DELETE">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::removeAllProductsApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+    
+    <route id="store-api.loyalty.cart.claim.discount" path="/store-api/loyalty/cart/claim-discount" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::claimDiscountApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+
+    <!-- Admin API routes (bearer token auth) -->
     <route id="api.action.loyalty.cart.add" path="/api/v{version}/loyalty/shop/{email}/cart/add" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::addProductApi</default>
+        <default key="_routeScope">api</default>
     </route>
     
     <route id="api.action.loyalty.cart.remove" path="/api/v{version}/loyalty/shop/{email}/cart/remove" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::removeProductApi</default>
+        <default key="_routeScope">api</default>
     </route>
     
     <route id="api.action.loyalty.cart.remove.all" path="/api/v{version}/loyalty/shop/{email}/cart" methods="DELETE">
         <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::removeAllProductsApi</default>
+        <default key="_routeScope">api</default>
     </route>
     
     <route id="api.action.loyalty.cart.claim.discount" path="/api/v{version}/loyalty/shop/{email}/cart/claim-discount" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::claimDiscountApi</default>
+        <default key="_routeScope">api</default>
     </route>
     
     <route id="api.action.loyalty_engage.customer.update" path="/api/_action/loyalty-engage/customer/update" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\CustomerLoyaltyController::updateCustomerLoyalty</default>
+        <default key="_routeScope">api</default>
     </route>
     
     <route id="api.action.loyalty_engage.customer.get" path="/api/_action/loyalty-engage/customer/get" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\CustomerLoyaltyController::getCustomerLoyalty</default>
+        <default key="_routeScope">api</default>
     </route>
 </routes>

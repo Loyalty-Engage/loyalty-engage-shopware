@@ -64,28 +64,36 @@ export default class LoyaltyCartPlugin extends Plugin {
         const productId = DomAccess.getAttribute(button, this.options.productIdAttribute);
         console.log('[LoyaltyCartPlugin] Product ID:', productId);
 
+        // Check if customer is logged in (Store API will handle auth via session)
         const customerEmail = window.loyaltyCustomerEmail;
 
         if (!customerEmail) {
-            console.warn('[LoyaltyCartPlugin] No email found in window, redirecting...');
+            console.warn('[LoyaltyCartPlugin] Customer not logged in, redirecting to login...');
             window.location.href = '/account/login';
             return;
         }
 
-        console.log('[LoyaltyCartPlugin] Using email:', customerEmail);
-        this._addProductToLoyaltyCart(customerEmail, productId, button);
+        console.log('[LoyaltyCartPlugin] Customer logged in, adding product...');
+        this._addProductToLoyaltyCart(productId, button);
     }
 
-    _addProductToLoyaltyCart(email, productId, button) {
+    _addProductToLoyaltyCart(productId, button) {
         button.disabled = true;
         const originalText = button.innerHTML;
         button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
 
+        // Use Store API endpoint - authentication is handled via customer session
         this._httpClient.post(
-            `/api/v1/loyalty/shop/${encodeURIComponent(email)}/cart/add`,
+            '/store-api/loyalty/cart/add',
             JSON.stringify({ productId }),
             (response) => {
-                const result = JSON.parse(response);
+                let result;
+                try {
+                    result = JSON.parse(response);
+                } catch (e) {
+                    result = { success: false, message: 'Invalid response from server' };
+                }
+                
                 button.disabled = false;
                 button.innerHTML = originalText;
 
@@ -93,15 +101,11 @@ export default class LoyaltyCartPlugin extends Plugin {
                     this._createNotification('success', 'Success', result.message);
                     window.location.reload();
                 } else {
-                    this._createNotification('danger', 'Error', result.message);
+                    this._createNotification('danger', 'Error', result.message || 'Failed to add product');
                 }
             },
-            (error) => {
-                button.disabled = false;
-                button.innerHTML = originalText;
-                this._createNotification('danger', 'Error', 'An error occurred while adding the product.');
-                console.error('Error:', error);
-            }
+            'application/json',
+            true // contentType header
         );
     }
 
@@ -125,27 +129,33 @@ export default class LoyaltyCartPlugin extends Plugin {
         const customerEmail = window.loyaltyCustomerEmail;
 
         if (!customerEmail) {
-            console.warn('[LoyaltyCartPlugin] No email found in window, redirecting...');
+            console.warn('[LoyaltyCartPlugin] Customer not logged in, redirecting to login...');
             window.location.href = '/account/login';
             return;
         }
 
-        console.log('[LoyaltyCartPlugin] Using email:', customerEmail);
-        this._claimDiscountAfterAddToLoyaltyCart(customerEmail, productId, discount, button);
+        console.log('[LoyaltyCartPlugin] Customer logged in, claiming discount...');
+        this._claimDiscountAfterAddToLoyaltyCart(productId, discount, button);
     }
 
-    _claimDiscountAfterAddToLoyaltyCart(email, productId, discount, button) {
+    _claimDiscountAfterAddToLoyaltyCart(productId, discount, button) {
         if (button) {
             button.disabled = true;
             button.originalText = button.innerHTML;
             button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
         }
 
+        // Use Store API endpoint - authentication is handled via customer session
         this._httpClient.post(
-            `/api/v1/loyalty/shop/${encodeURIComponent(email)}/cart/claim-discount`,
+            '/store-api/loyalty/cart/claim-discount',
             JSON.stringify({ productId, discount }),
             (response) => {
-                const result = JSON.parse(response);
+                let result;
+                try {
+                    result = JSON.parse(response);
+                } catch (e) {
+                    result = { success: false, message: 'Invalid response from server' };
+                }
                 
                 if (button) {
                     button.disabled = false;
@@ -156,17 +166,11 @@ export default class LoyaltyCartPlugin extends Plugin {
                     this._createNotification('success', 'Success', result.message);
                     window.location.reload();
                 } else {
-                    this._createNotification('danger', 'Error', result.message);
+                    this._createNotification('danger', 'Error', result.message || 'Failed to claim discount');
                 }
             },
-            (error) => {
-                if (button) {
-                    button.disabled = false;
-                    button.innerHTML = button.originalText;
-                }
-                this._createNotification('danger', 'Error', 'An error occurred while claiming discount.');
-                console.error('Error:', error);
-            }
+            'application/json',
+            true
         );
     }
 
@@ -178,26 +182,29 @@ export default class LoyaltyCartPlugin extends Plugin {
             return;
         }
 
+        // Use Store API endpoint
         this._httpClient.post(
-            `/api/v1/loyalty/shop/${encodeURIComponent(email)}/cart/claim-discount`,
+            '/store-api/loyalty/cart/claim-discount',
             JSON.stringify({ productId, discount: discount || 0.1 }),
             (response) => {
-                const result = JSON.parse(response);
+                let result;
+                try {
+                    result = JSON.parse(response);
+                } catch (e) {
+                    result = { success: false, message: 'Invalid response from server' };
+                }
 
                 if (result.success) {
                     this._createNotification('success', 'Success', result.message);
                     if (typeof callback === 'function') callback(true, result.message);
                     else window.location.reload();
                 } else {
-                    this._createNotification('danger', 'Error', result.message);
+                    this._createNotification('danger', 'Error', result.message || 'Failed to claim discount');
                     if (typeof callback === 'function') callback(false, result.message);
                 }
             },
-            (error) => {
-                const message = 'An error occurred while claiming discount.';
-                this._createNotification('danger', 'Error', message);
-                if (typeof callback === 'function') callback(false, message);
-            }
+            'application/json',
+            true
         );
     }
 
@@ -209,26 +216,29 @@ export default class LoyaltyCartPlugin extends Plugin {
             return;
         }
 
+        // Use Store API endpoint
         this._httpClient.post(
-            `/api/v1/loyalty/shop/${encodeURIComponent(email)}/cart/add`,
+            '/store-api/loyalty/cart/add',
             JSON.stringify({ productId }),
             (response) => {
-                const result = JSON.parse(response);
+                let result;
+                try {
+                    result = JSON.parse(response);
+                } catch (e) {
+                    result = { success: false, message: 'Invalid response from server' };
+                }
 
                 if (result.success) {
                     this._createNotification('success', 'Success', result.message);
                     if (typeof callback === 'function') callback(true, result.message);
                     else window.location.reload();
                 } else {
-                    this._createNotification('danger', 'Error', result.message);
+                    this._createNotification('danger', 'Error', result.message || 'Failed to add product');
                     if (typeof callback === 'function') callback(false, result.message);
                 }
             },
-            (error) => {
-                const message = 'An error occurred while adding the product.';
-                this._createNotification('danger', 'Error', message);
-                if (typeof callback === 'function') callback(false, message);
-            }
+            'application/json',
+            true
         );
     }
 }

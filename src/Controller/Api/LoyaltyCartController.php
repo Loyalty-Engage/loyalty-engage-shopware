@@ -5,15 +5,18 @@ namespace LoyaltyEngage\Controller\Api;
 use LoyaltyEngage\Api\LoyaltyCartApiInterface;
 use LoyaltyEngage\Service\LoyaltyCartService;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Shopware\Storefront\Controller\StorefrontController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
 
 /**
  * Controller for loyalty cart API endpoints
+ * Supports both Store API (frontend) and Admin API (backend) routes
  */
-class LoyaltyCartController extends AbstractController implements LoyaltyCartApiInterface
+#[Route(defaults: ['_routeScope' => ['store-api', 'api']])]
+class LoyaltyCartController extends StorefrontController implements LoyaltyCartApiInterface
 {
     /**
      * @var LoyaltyCartService
@@ -29,14 +32,43 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     }
 
     /**
-     * Add a product to the cart using loyalty points
+     * Get customer email from context or request parameter
      */
-    public function addProductApi(string $email, Request $request, SalesChannelContext $context): JsonResponse
+    private function getCustomerEmail(?string $emailParam, SalesChannelContext $context): ?string
+    {
+        // For Store API: get email from logged-in customer
+        if ($context->getCustomer()) {
+            return $context->getCustomer()->getEmail();
+        }
+        
+        // For Admin API: use email from URL parameter
+        if ($emailParam) {
+            return $emailParam;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Add a product to the cart using loyalty points
+     * Works for both Store API (no email param) and Admin API (with email param)
+     */
+    public function addProductApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
+        
+        // Get email from logged-in customer or URL parameter
+        $customerEmail = $this->getCustomerEmail($email, $context);
+        
+        if (!$customerEmail) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Customer not logged in or email not provided.'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
 
-        $result = $this->addProduct($email, $productId, $context);
+        $result = $this->addProduct($customerEmail, $productId, $context);
 
         return new JsonResponse($result, $result['success'] ? Response::HTTP_OK : Response::HTTP_BAD_REQUEST);
     }
@@ -44,12 +76,21 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     /**
      * Remove a product from the cart
      */
-    public function removeProductApi(string $email, Request $request, SalesChannelContext $context): JsonResponse
+    public function removeProductApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
+        
+        $customerEmail = $this->getCustomerEmail($email, $context);
+        
+        if (!$customerEmail) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Customer not logged in or email not provided.'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
 
-        $result = $this->removeProduct($email, $productId, $context);
+        $result = $this->removeProduct($customerEmail, $productId, $context);
 
         return new JsonResponse($result, $result['success'] ? Response::HTTP_OK : Response::HTTP_BAD_REQUEST);
     }
@@ -57,9 +98,18 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     /**
      * Remove all products from the cart
      */
-    public function removeAllProductsApi(string $email, SalesChannelContext $context): JsonResponse
+    public function removeAllProductsApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
     {
-        $result = $this->removeAllProducts($email, $context);
+        $customerEmail = $this->getCustomerEmail($email, $context);
+        
+        if (!$customerEmail) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Customer not logged in or email not provided.'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $result = $this->removeAllProducts($customerEmail, $context);
 
         return new JsonResponse($result, $result['success'] ? Response::HTTP_OK : Response::HTTP_BAD_REQUEST);
     }
@@ -67,13 +117,22 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     /**
      * Claim a discount after adding a product to the loyalty cart
      */
-    public function claimDiscountApi(string $email, Request $request, SalesChannelContext $context): JsonResponse
+    public function claimDiscountApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
         $discount = (float)($data['discount'] ?? 0.1); // Default to 10% if not specified
+        
+        $customerEmail = $this->getCustomerEmail($email, $context);
+        
+        if (!$customerEmail) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Customer not logged in or email not provided.'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
 
-        $result = $this->claimDiscountAfterAddToCart($email, $productId, $discount, $context);
+        $result = $this->claimDiscountAfterAddToCart($customerEmail, $productId, $discount, $context);
 
         return new JsonResponse($result, $result['success'] ? Response::HTTP_OK : Response::HTTP_BAD_REQUEST);
     }
