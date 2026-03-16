@@ -81,4 +81,82 @@
             <defaultValue>false</defaultValue>
         </input-field>
     </card>
+    
+    <card>
+        <title>Points Redemption Settings</title>
+        <title lang="de-DE">Punkte-Einlösung Einstellungen</title>
+        <title lang="nl-NL">Punten Inwisselen Instellingen</title>
+        
+        <input-field type="bool">
+            <name>pointsRedemptionEnabled</name>
+            <label>Enable Points Redemption</label>
+            <label lang="de-DE">Punkte-Einlösung aktivieren</label>
+            <label lang="nl-NL">Punten inwisselen inschakelen</label>
+            <helpText>Allow customers to redeem loyalty points for discounts in checkout.</helpText>
+            <helpText lang="de-DE">Ermöglicht Kunden, Treuepunkte gegen Rabatte im Checkout einzulösen.</helpText>
+            <helpText lang="nl-NL">Sta klanten toe om loyaliteitspunten in te wisselen voor korting in de checkout.</helpText>
+            <defaultValue>false</defaultValue>
+        </input-field>
+        
+        <input-field type="text">
+            <name>discountProductSku</name>
+            <label>Discount Product SKU</label>
+            <label lang="de-DE">Rabattprodukt SKU</label>
+            <label lang="nl-NL">Kortingsproduct SKU</label>
+            <helpText>The SKU of the €1 discount product in LoyaltyEngage. This product will be purchased multiple times to create the discount.</helpText>
+            <helpText lang="de-DE">Die SKU des €1 Rabattprodukts in LoyaltyEngage. Dieses Produkt wird mehrfach gekauft, um den Rabatt zu erstellen.</helpText>
+            <helpText lang="nl-NL">De SKU van het €1 kortingsproduct in LoyaltyEngage. Dit product wordt meerdere keren gekocht om de korting te creëren.</helpText>
+            <placeholder>DISCOUNT-1EUR</placeholder>
+        </input-field>
+        
+        <input-field type="int">
+            <name>pointsPerEuro</name>
+            <label>Points per Euro</label>
+            <label lang="de-DE">Punkte pro Euro</label>
+            <label lang="nl-NL">Punten per Euro</label>
+            <helpText>How many points are needed for €1 discount. Default: 1 point = €1.</helpText>
+            <helpText lang="de-DE">Wie viele Punkte für €1 Rabatt benötigt werden. Standard: 1 Punkt = €1.</helpText>
+            <helpText lang="nl-NL">Hoeveel punten nodig zijn voor €1 korting. Standaard: 1 punt = €1.</helpText>
+            <defaultValue>1</defaultValue>
+            <min>1</min>
+            <max>100</max>
+        </input-field>
+        
+        <input-field type="int">
+            <name>minPointsToRedeem</name>
+            <label>Minimum Points to Redeem</label>
+            <label lang="de-DE">Mindestpunkte zum Einlösen</label>
+            <label lang="nl-NL">Minimum punten om in te wisselen</label>
+            <helpText>Minimum number of points a customer must redeem at once.</helpText>
+            <helpText lang="de-DE">Mindestanzahl an Punkten, die ein Kunde auf einmal einlösen muss.</helpText>
+            <helpText lang="nl-NL">Minimum aantal punten dat een klant in één keer moet inwisselen.</helpText>
+            <defaultValue>1</defaultValue>
+            <min>1</min>
+        </input-field>
+        
+        <input-field type="int">
+            <name>maxPointsPerOrder</name>
+            <label>Maximum Points per Order</label>
+            <label lang="de-DE">Maximale Punkte pro Bestellung</label>
+            <label lang="nl-NL">Maximum punten per bestelling</label>
+            <helpText>Maximum number of points that can be redeemed per order. Set to 0 for unlimited.</helpText>
+            <helpText lang="de-DE">Maximale Anzahl an Punkten, die pro Bestellung eingelöst werden können. 0 für unbegrenzt.</helpText>
+            <helpText lang="nl-NL">Maximum aantal punten dat per bestelling kan worden ingewisseld. Stel in op 0 voor onbeperkt.</helpText>
+            <defaultValue>0</defaultValue>
+            <min>0</min>
+        </input-field>
+        
+        <input-field type="int">
+            <name>maxDiscountPercentage</name>
+            <label>Maximum Discount Percentage</label>
+            <label lang="de-DE">Maximaler Rabattprozentsatz</label>
+            <label lang="nl-NL">Maximum kortingspercentage</label>
+            <helpText>Maximum percentage of order total that can be paid with points. Set to 0 for unlimited.</helpText>
+            <helpText lang="de-DE">Maximaler Prozentsatz des Bestellwerts, der mit Punkten bezahlt werden kann. 0 für unbegrenzt.</helpText>
+            <helpText lang="nl-NL">Maximum percentage van het ordertotaal dat met punten kan worden betaald. Stel in op 0 voor onbeperkt.</helpText>
+            <defaultValue>0</defaultValue>
+            <min>0</min>
+            <max>100</max>
+        </input-field>
+    </card>
 </config>

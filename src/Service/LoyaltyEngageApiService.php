@@ -395,6 +395,198 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Check if Points Redemption is enabled
+     */
+    public function isPointsRedemptionEnabled(): bool
+    {
+        return (bool) $this->systemConfigService->get('LoyaltyEngage.config.pointsRedemptionEnabled');
+    }
+
+    /**
+     * Get Discount Product SKU from config
+     */
+    public function getDiscountProductSku(): ?string
+    {
+        return $this->systemConfigService->get('LoyaltyEngage.config.discountProductSku');
+    }
+
+    /**
+     * Get Points per Euro ratio from config
+     */
+    public function getPointsPerEuro(): int
+    {
+        return (int) ($this->systemConfigService->get('LoyaltyEngage.config.pointsPerEuro') ?: 1);
+    }
+
+    /**
+     * Get Minimum Points to Redeem from config
+     */
+    public function getMinPointsToRedeem(): int
+    {
+        return (int) ($this->systemConfigService->get('LoyaltyEngage.config.minPointsToRedeem') ?: 1);
+    }
+
+    /**
+     * Get Maximum Points per Order from config
+     */
+    public function getMaxPointsPerOrder(): int
+    {
+        return (int) ($this->systemConfigService->get('LoyaltyEngage.config.maxPointsPerOrder') ?: 0);
+    }
+
+    /**
+     * Get Maximum Discount Percentage from config
+     */
+    public function getMaxDiscountPercentage(): int
+    {
+        return (int) ($this->systemConfigService->get('LoyaltyEngage.config.maxDiscountPercentage') ?: 0);
+    }
+
+    /**
+     * Buy a discount code product from the loyalty system
+     * This endpoint is used to purchase discount codes using loyalty points/coins
+     * 
+     * @param string $email Customer email/identifier
+     * @param string $sku SKU of the discount code product
+     * @return array|null Response with discount code info or null on failure
+     */
+    public function buyDiscountCodeProduct(string $email, string $sku): ?array
+    {
+        // Get the base URL from config, or use the default if not set
+        $apiUrl = $this->getApiUrl();
+        if (!$apiUrl) {
+            $apiUrl = 'https://app.loyaltyengage.tech';
+            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
+                'defaultUrl' => $apiUrl
+            ]);
+        }
+        
+        // Ensure the URL starts with https://app.loyaltyengage.tech
+        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
+            $apiUrl = 'https://app.loyaltyengage.tech';
+            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
+                'configuredUrl' => $this->getApiUrl(),
+                'defaultUrl' => $apiUrl
+            ]);
+        }
+        
+        $url = rtrim($apiUrl, '/') . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/buy_discount_code';
+        $payload = [
+            'sku' => $sku
+        ];
+
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage buying discount code product', [
+                'url' => $url,
+                'email' => $email,
+                'sku' => $sku
+            ]);
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
+                ],
+                'json' => $payload,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $content = $response->getContent(false);
+
+            if ($this->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage Buy Discount Code Response:', [
+                    'email' => $email,
+                    'sku' => $sku,
+                    'response_code' => $statusCode,
+                    'response_body' => $content
+                ]);
+            }
+
+            if ($statusCode !== 200) {
+                $this->logger->error('LoyaltyEngage Buy Discount Code failed', [
+                    'email' => $email,
+                    'sku' => $sku,
+                    'statusCode' => $statusCode,
+                    'response' => $content
+                ]);
+                return null;
+            }
+
+            $result = json_decode($content, true);
+            return $result ?: ['success' => true, 'statusCode' => $statusCode];
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage Buy Discount Code Error:', [
+                'email' => $email,
+                'sku' => $sku,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Buy multiple discount code products (for redeeming multiple points)
+     * 
+     * @param string $email Customer email/identifier
+     * @param string $sku SKU of the discount code product
+     * @param int $quantity Number of times to purchase the discount product
+     * @return array Result with success status and discount codes
+     */
+    public function buyMultipleDiscountCodeProducts(string $email, string $sku, int $quantity): array
+    {
+        $results = [];
+        $successCount = 0;
+        $failCount = 0;
+        $discountCodes = [];
+
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage buying multiple discount code products', [
+                'email' => $email,
+                'sku' => $sku,
+                'quantity' => $quantity
+            ]);
+        }
+
+        for ($i = 0; $i < $quantity; $i++) {
+            $result = $this->buyDiscountCodeProduct($email, $sku);
+            
+            if ($result !== null) {
+                $successCount++;
+                $results[] = $result;
+                
+                // Extract discount code if present in response
+                if (isset($result['discountCode'])) {
+                    $discountCodes[] = $result['discountCode'];
+                } elseif (isset($result['code'])) {
+                    $discountCodes[] = $result['code'];
+                }
+            } else {
+                $failCount++;
+                // Stop on first failure to prevent partial redemptions
+                $this->logger->warning('LoyaltyEngage stopping bulk purchase due to failure', [
+                    'email' => $email,
+                    'sku' => $sku,
+                    'successCount' => $successCount,
+                    'failedAt' => $i + 1,
+                    'totalRequested' => $quantity
+                ]);
+                break;
+            }
+        }
+
+        return [
+            'success' => $failCount === 0 && $successCount === $quantity,
+            'successCount' => $successCount,
+            'failCount' => $failCount,
+            'totalRequested' => $quantity,
+            'discountCodes' => $discountCodes,
+            'results' => $results
+        ];
+    }
+
+    /**
      * Claim a discount from the loyalty system
      */
     public function claimDiscount(string $email, float $discount): ?array

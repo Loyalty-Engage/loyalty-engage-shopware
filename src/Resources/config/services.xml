@@ -42,6 +42,21 @@
             <argument type="service" id="logger"/>
         </service>
 
+        <!-- Points Redemption Service -->
+        <service id="LoyaltyEngage\Service\PointsRedemptionService">
+            <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\CartPersister"/>
+            <argument type="service" id="customer.repository"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+        </service>
+
+        <!-- Points Redemption Controller -->
+        <service id="LoyaltyEngage\Controller\Api\PointsRedemptionController" public="true">
+            <argument type="service" id="LoyaltyEngage\Service\PointsRedemptionService"/>
+            <tag name="controller.service_arguments"/>
+        </service>
+
         <!-- Message Handlers -->
         <service id="LoyaltyEngage\Message\Handler\PurchaseMessageHandler">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>

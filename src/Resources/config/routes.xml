@@ -59,4 +59,50 @@
         <default key="_controller">LoyaltyEngage\Controller\Api\CustomerLoyaltyController::getCustomerLoyalty</default>
         <default key="_routeScope">api</default>
     </route>
+
+    <!-- Points Redemption - Store API routes (frontend, customer session auth) -->
+    <route id="store-api.loyalty.redeem-points" path="/store-api/loyalty/redeem-points" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::redeemPointsApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+    
+    <route id="store-api.loyalty.redeem-points.remove" path="/store-api/loyalty/redeem-points" methods="DELETE">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::removePointsDiscountApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+    
+    <route id="store-api.loyalty.redeem-points.info" path="/store-api/loyalty/redeem-points/info" methods="GET">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::getRedemptionInfoApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+    
+    <route id="store-api.loyalty.redeem-points.preview" path="/store-api/loyalty/redeem-points/preview" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::previewRedemptionApi</default>
+        <default key="_routeScope">store-api</default>
+        <default key="_loginRequired">true</default>
+    </route>
+
+    <!-- Points Redemption - Admin API routes (bearer token auth) -->
+    <route id="api.action.loyalty.redeem-points" path="/api/v{version}/loyalty/shop/{email}/redeem-points" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::redeemPointsApi</default>
+        <default key="_routeScope">api</default>
+    </route>
+    
+    <route id="api.action.loyalty.redeem-points.remove" path="/api/v{version}/loyalty/shop/{email}/redeem-points" methods="DELETE">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::removePointsDiscountApi</default>
+        <default key="_routeScope">api</default>
+    </route>
+    
+    <route id="api.action.loyalty.redeem-points.info" path="/api/v{version}/loyalty/shop/{email}/redeem-points/info" methods="GET">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::getRedemptionInfoApi</default>
+        <default key="_routeScope">api</default>
+    </route>
+    
+    <route id="api.action.loyalty.redeem-points.preview" path="/api/v{version}/loyalty/shop/{email}/redeem-points/preview" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::previewRedemptionApi</default>
+        <default key="_routeScope">api</default>
+    </route>
 </routes>
