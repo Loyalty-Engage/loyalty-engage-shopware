@@ -63,25 +63,41 @@
     <!-- Points Redemption - Store API routes (frontend, customer session auth) -->
     <route id="store-api.loyalty.redeem-points" path="/store-api/loyalty/redeem-points" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::redeemPointsApi</default>
-        <default key="_routeScope">store-api</default>
+        <default key="_routeScope">
+            <list>
+                <string>store-api</string>
+            </list>
+        </default>
         <default key="_loginRequired">true</default>
     </route>
     
     <route id="store-api.loyalty.redeem-points.remove" path="/store-api/loyalty/redeem-points" methods="DELETE">
         <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::removePointsDiscountApi</default>
-        <default key="_routeScope">store-api</default>
+        <default key="_routeScope">
+            <list>
+                <string>store-api</string>
+            </list>
+        </default>
         <default key="_loginRequired">true</default>
     </route>
     
     <route id="store-api.loyalty.redeem-points.info" path="/store-api/loyalty/redeem-points/info" methods="GET">
         <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::getRedemptionInfoApi</default>
-        <default key="_routeScope">store-api</default>
+        <default key="_routeScope">
+            <list>
+                <string>store-api</string>
+            </list>
+        </default>
         <default key="_loginRequired">true</default>
     </route>
     
     <route id="store-api.loyalty.redeem-points.preview" path="/store-api/loyalty/redeem-points/preview" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\PointsRedemptionController::previewRedemptionApi</default>
-        <default key="_routeScope">store-api</default>
+        <default key="_routeScope">
+            <list>
+                <string>store-api</string>
+            </list>
+        </default>
         <default key="_loginRequired">true</default>
     </route>
 
