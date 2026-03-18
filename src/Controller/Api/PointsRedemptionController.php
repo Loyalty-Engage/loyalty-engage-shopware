@@ -4,7 +4,7 @@ namespace LoyaltyEngage\Controller\Api;
 
 use LoyaltyEngage\Service\PointsRedemptionService;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
-use Shopware\Storefront\Controller\StorefrontController;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Annotation\Route;
  * Supports both Store API (frontend) and Admin API (backend) routes
  */
 #[Route(defaults: ['_routeScope' => ['store-api', 'api']])]
-class PointsRedemptionController extends StorefrontController
+class PointsRedemptionController extends AbstractController
 {
     /**
      * @var PointsRedemptionService
