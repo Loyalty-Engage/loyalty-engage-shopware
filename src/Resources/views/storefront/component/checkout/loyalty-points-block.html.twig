@@ -154,14 +154,13 @@ window.redeemLoyaltyPoints = function(points, callback) {
         return;
     }
     
-    fetch('/store-api/loyalty-engage/points/redeem', {
+    fetch('/store-api/loyalty/redeem-points', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'sw-access-key': document.querySelector('meta[name="sw-access-key"]')?.content || ''
         },
         body: JSON.stringify({
-            customerEmail: customerEmail,
             points: points
         })
     })
@@ -183,22 +182,12 @@ window.redeemLoyaltyPoints = function(points, callback) {
 };
 
 window.removeLoyaltyPointsDiscount = function(callback) {
-    const customerEmail = window.loyaltyCustomerEmail;
-    if (!customerEmail) {
-        alert('Customer email not found');
-        if (callback) callback(false, null);
-        return;
-    }
-    
-    fetch('/store-api/loyalty-engage/points/remove', {
-        method: 'POST',
+    fetch('/store-api/loyalty/redeem-points', {
+        method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
             'sw-access-key': document.querySelector('meta[name="sw-access-key"]')?.content || ''
-        },
-        body: JSON.stringify({
-            customerEmail: customerEmail
-        })
+        }
     })
     .then(response => response.json())
     .then(data => {
