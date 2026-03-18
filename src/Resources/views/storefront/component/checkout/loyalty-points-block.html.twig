@@ -145,6 +145,78 @@
 
 {# Inline JavaScript for interactivity #}
 <script>
+// Define global functions for loyalty points redemption
+window.redeemLoyaltyPoints = function(points, callback) {
+    const customerEmail = window.loyaltyCustomerEmail;
+    if (!customerEmail) {
+        alert('Customer email not found');
+        if (callback) callback(false, null);
+        return;
+    }
+    
+    fetch('/store-api/loyalty-engage/points/redeem', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'sw-access-key': document.querySelector('meta[name="sw-access-key"]')?.content || ''
+        },
+        body: JSON.stringify({
+            customerEmail: customerEmail,
+            points: points
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload page to show updated cart
+            window.location.reload();
+        } else {
+            alert(data.message || 'Failed to redeem points');
+            if (callback) callback(false, data);
+        }
+    })
+    .catch(error => {
+        console.error('Error redeeming points:', error);
+        alert('An error occurred while redeeming points');
+        if (callback) callback(false, null);
+    });
+};
+
+window.removeLoyaltyPointsDiscount = function(callback) {
+    const customerEmail = window.loyaltyCustomerEmail;
+    if (!customerEmail) {
+        alert('Customer email not found');
+        if (callback) callback(false, null);
+        return;
+    }
+    
+    fetch('/store-api/loyalty-engage/points/remove', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'sw-access-key': document.querySelector('meta[name="sw-access-key"]')?.content || ''
+        },
+        body: JSON.stringify({
+            customerEmail: customerEmail
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload page to show updated cart
+            window.location.reload();
+        } else {
+            alert(data.message || 'Failed to remove discount');
+            if (callback) callback(false, data);
+        }
+    })
+    .catch(error => {
+        console.error('Error removing discount:', error);
+        alert('An error occurred while removing discount');
+        if (callback) callback(false, null);
+    });
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const pointsInput = document.getElementById('loyalty-points-input');
     const previewAmount = document.getElementById('loyalty-preview-amount');
