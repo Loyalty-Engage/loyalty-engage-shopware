@@ -18,5 +18,27 @@
                 "discount_failed": "Rabatt konnte nicht beansprucht werden."
             }
         }
+    },
+    "loyaltyEngage": {
+        "checkout": {
+            "title": "Lösen Sie Ihre Treuepunkte ein",
+            "availablePoints": "Verfügbar",
+            "points": "Punkte",
+            "point": "Punkt",
+            "conversionRate": "Umrechnungskurs",
+            "yourTier": "Ihre Stufe",
+            "discountApplied": "Rabatt angewendet",
+            "removeDiscount": "Entfernen",
+            "pointsToRedeem": "Punkte einlösen",
+            "enterPoints": "Punkte eingeben",
+            "maxRedeemable": "Maximum",
+            "discountPreview": "Rabatt",
+            "applyDiscount": "Rabatt anwenden",
+            "processing": "Verarbeitung...",
+            "quickSelect": "Schnellauswahl",
+            "max": "Max",
+            "notEnoughPoints": "Sie benötigen mindestens %min% Punkte, um einen Rabatt einzulösen.",
+            "enterValidPoints": "Bitte geben Sie eine gültige Anzahl von Punkten ein."
+        }
     }
 }

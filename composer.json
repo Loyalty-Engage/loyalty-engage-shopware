@@ -2,7 +2,7 @@
     "name": "loyalty-engage/loyalty-shop",
     "description": "Shopware 6 plugin to add products to cart based on loyalty points",
     "type": "shopware-platform-plugin",
-    "version": "1.0.0",
+    "version": "1.2.3",
     "license": "MIT",
     "authors": [
         {

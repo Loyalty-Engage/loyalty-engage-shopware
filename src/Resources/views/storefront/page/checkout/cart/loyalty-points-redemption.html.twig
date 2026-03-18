@@ -1,0 +1,13 @@
+{% sw_extends '@Storefront/storefront/page/checkout/cart/index.html.twig' %}
+
+{% block page_checkout_cart_container %}
+    {{ parent() }}
+
+    {% set loyaltyData = page.extensions.loyaltyPointsRedemption %}
+    
+    {% if loyaltyData and loyaltyData.enabled %}
+        {% sw_include '@LoyaltyEngage/storefront/component/checkout/loyalty-points-block.html.twig' with {
+            loyaltyData: loyaltyData
+        } %}
+    {% endif %}
+{% endblock %}

@@ -18,5 +18,27 @@
                 "discount_failed": "Failed to claim discount."
             }
         }
+    },
+    "loyaltyEngage": {
+        "checkout": {
+            "title": "Redeem your loyalty points",
+            "availablePoints": "Available",
+            "points": "points",
+            "point": "point",
+            "conversionRate": "Conversion rate",
+            "yourTier": "Your tier",
+            "discountApplied": "Discount applied",
+            "removeDiscount": "Remove",
+            "pointsToRedeem": "Points to redeem",
+            "enterPoints": "Enter points",
+            "maxRedeemable": "Maximum",
+            "discountPreview": "Discount",
+            "applyDiscount": "Apply discount",
+            "processing": "Processing...",
+            "quickSelect": "Quick select",
+            "max": "Max",
+            "notEnoughPoints": "You need at least %min% points to redeem for a discount.",
+            "enterValidPoints": "Please enter a valid number of points."
+        }
     }
 }

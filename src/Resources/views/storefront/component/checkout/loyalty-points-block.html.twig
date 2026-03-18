@@ -1,0 +1,242 @@
+{# Loyalty Points Redemption Block for Checkout #}
+{% block loyalty_points_redemption_block %}
+<div class="loyalty-points-redemption card mt-4" 
+     data-loyalty-cart="true"
+     data-customer-email="{{ loyaltyData.customerEmail }}"
+     id="loyalty-points-redemption-block">
+    
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex align-items-center">
+            <span class="loyalty-icon me-2">🎁</span>
+            <h5 class="mb-0">{{ "loyaltyEngage.checkout.title"|trans|sw_sanitize }}</h5>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        {# Customer Points Info #}
+        <div class="loyalty-points-info mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="points-available">
+                        <span class="label">{{ "loyaltyEngage.checkout.availablePoints"|trans|sw_sanitize }}:</span>
+                        <span class="value fw-bold text-primary" id="loyalty-available-points">{{ loyaltyData.availableCoins }}</span>
+                        <span class="unit">{{ "loyaltyEngage.checkout.points"|trans|sw_sanitize }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="points-conversion">
+                        <span class="label">{{ "loyaltyEngage.checkout.conversionRate"|trans|sw_sanitize }}:</span>
+                        <span class="value">{{ loyaltyData.pointsPerEuro }} {{ "loyaltyEngage.checkout.point"|trans|sw_sanitize }} = €1</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if loyaltyData.currentTier %}
+            <div class="tier-info mt-2">
+                <small class="text-muted">
+                    {{ "loyaltyEngage.checkout.yourTier"|trans|sw_sanitize }}: 
+                    <span class="badge bg-secondary">{{ loyaltyData.currentTier }}</span>
+                </small>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Existing Discount Display #}
+        {% if loyaltyData.existingDiscount %}
+        <div class="loyalty-existing-discount alert alert-success mb-3" id="loyalty-existing-discount">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ "loyaltyEngage.checkout.discountApplied"|trans|sw_sanitize }}:</strong>
+                    <span class="discount-amount">-€{{ loyaltyData.existingDiscount.amount|number_format(2, ',', '.') }}</span>
+                </div>
+                <button type="button" 
+                        class="btn btn-sm btn-outline-danger loyalty-remove-points-discount-button"
+                        id="loyalty-remove-discount-btn">
+                    <span class="btn-text">{{ "loyaltyEngage.checkout.removeDiscount"|trans|sw_sanitize }}</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </span>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Redemption Form #}
+        {% if loyaltyData.canRedeem and not loyaltyData.existingDiscount %}
+        <div class="loyalty-redemption-form" id="loyalty-redemption-form">
+            <div class="row align-items-end">
+                <div class="col-md-5">
+                    <label for="loyalty-points-input" class="form-label">
+                        {{ "loyaltyEngage.checkout.pointsToRedeem"|trans|sw_sanitize }}
+                    </label>
+                    <div class="input-group">
+                        <input type="number" 
+                               class="form-control loyalty-points-input" 
+                               id="loyalty-points-input"
+                               min="{{ loyaltyData.minPointsToRedeem }}"
+                               max="{{ loyaltyData.maxRedeemablePoints }}"
+                               value="{{ loyaltyData.maxRedeemablePoints }}"
+                               step="1"
+                               placeholder="{{ "loyaltyEngage.checkout.enterPoints"|trans|sw_sanitize }}">
+                        <span class="input-group-text">{{ "loyaltyEngage.checkout.points"|trans|sw_sanitize }}</span>
+                    </div>
+                    <small class="text-muted">
+                        {{ "loyaltyEngage.checkout.maxRedeemable"|trans|sw_sanitize }}: {{ loyaltyData.maxRedeemablePoints }} {{ "loyaltyEngage.checkout.points"|trans|sw_sanitize }}
+                    </small>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="discount-preview" id="loyalty-discount-preview">
+                        <label class="form-label">{{ "loyaltyEngage.checkout.discountPreview"|trans|sw_sanitize }}</label>
+                        <div class="preview-amount h4 text-success mb-0" id="loyalty-preview-amount">
+                            -€{{ (loyaltyData.maxRedeemablePoints / loyaltyData.pointsPerEuro)|number_format(2, ',', '.') }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <button type="button" 
+                            class="btn btn-primary w-100 loyalty-redeem-points-button"
+                            id="loyalty-redeem-btn"
+                            data-points-input="#loyalty-points-input">
+                        <span class="btn-text">{{ "loyaltyEngage.checkout.applyDiscount"|trans|sw_sanitize }}</span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            {{ "loyaltyEngage.checkout.processing"|trans|sw_sanitize }}
+                        </span>
+                    </button>
+                </div>
+            </div>
+            
+            {# Quick Select Buttons #}
+            {% if loyaltyData.maxRedeemablePoints >= 10 %}
+            <div class="quick-select-buttons mt-3">
+                <small class="text-muted d-block mb-2">{{ "loyaltyEngage.checkout.quickSelect"|trans|sw_sanitize }}:</small>
+                <div class="btn-group btn-group-sm" role="group">
+                    {% for amount in [10, 25, 50, 100] %}
+                        {% if amount <= loyaltyData.maxRedeemablePoints %}
+                        <button type="button" 
+                                class="btn btn-outline-primary loyalty-quick-select"
+                                data-points="{{ amount }}">
+                            {{ amount }} {{ "loyaltyEngage.checkout.points"|trans|sw_sanitize }} (€{{ (amount / loyaltyData.pointsPerEuro)|number_format(0) }})
+                        </button>
+                        {% endif %}
+                    {% endfor %}
+                    <button type="button" 
+                            class="btn btn-outline-primary loyalty-quick-select"
+                            data-points="{{ loyaltyData.maxRedeemablePoints }}">
+                        {{ "loyaltyEngage.checkout.max"|trans|sw_sanitize }} (€{{ loyaltyData.maxDiscountAmount|number_format(0) }})
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% elseif not loyaltyData.canRedeem and loyaltyData.availableCoins < loyaltyData.minPointsToRedeem %}
+        {# Not enough points message #}
+        <div class="alert alert-info mb-0">
+            <small>
+                {{ "loyaltyEngage.checkout.notEnoughPoints"|trans({'%min%': loyaltyData.minPointsToRedeem})|sw_sanitize }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Inline JavaScript for interactivity #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pointsInput = document.getElementById('loyalty-points-input');
+    const previewAmount = document.getElementById('loyalty-preview-amount');
+    const quickSelectButtons = document.querySelectorAll('.loyalty-quick-select');
+    const redeemBtn = document.getElementById('loyalty-redeem-btn');
+    const removeBtn = document.getElementById('loyalty-remove-discount-btn');
+    const pointsPerEuro = {{ loyaltyData.pointsPerEuro }};
+    
+    // Update preview when input changes
+    if (pointsInput && previewAmount) {
+        pointsInput.addEventListener('input', function() {
+            const points = parseInt(this.value) || 0;
+            const discount = points / pointsPerEuro;
+            previewAmount.textContent = '-€' + discount.toFixed(2).replace('.', ',');
+        });
+    }
+    
+    // Quick select buttons
+    quickSelectButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const points = parseInt(this.dataset.points);
+            if (pointsInput) {
+                pointsInput.value = points;
+                pointsInput.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+    
+    // Redeem button click
+    if (redeemBtn) {
+        redeemBtn.addEventListener('click', function() {
+            const points = parseInt(pointsInput.value) || 0;
+            if (points <= 0) {
+                alert('{{ "loyaltyEngage.checkout.enterValidPoints"|trans|sw_sanitize }}');
+                return;
+            }
+            
+            // Show loading state
+            redeemBtn.querySelector('.btn-text').classList.add('d-none');
+            redeemBtn.querySelector('.btn-loading').classList.remove('d-none');
+            redeemBtn.disabled = true;
+            
+            // Call the redeem function
+            if (typeof window.redeemLoyaltyPoints === 'function') {
+                window.redeemLoyaltyPoints(points, function(success, result) {
+                    if (!success) {
+                        // Reset button state on error
+                        redeemBtn.querySelector('.btn-text').classList.remove('d-none');
+                        redeemBtn.querySelector('.btn-loading').classList.add('d-none');
+                        redeemBtn.disabled = false;
+                    }
+                    // On success, page will reload
+                });
+            } else {
+                console.error('redeemLoyaltyPoints function not available');
+                redeemBtn.querySelector('.btn-text').classList.remove('d-none');
+                redeemBtn.querySelector('.btn-loading').classList.add('d-none');
+                redeemBtn.disabled = false;
+            }
+        });
+    }
+    
+    // Remove discount button click
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+            // Show loading state
+            removeBtn.querySelector('.btn-text').classList.add('d-none');
+            removeBtn.querySelector('.btn-loading').classList.remove('d-none');
+            removeBtn.disabled = true;
+            
+            // Call the remove function
+            if (typeof window.removeLoyaltyPointsDiscount === 'function') {
+                window.removeLoyaltyPointsDiscount(function(success, result) {
+                    if (!success) {
+                        // Reset button state on error
+                        removeBtn.querySelector('.btn-text').classList.remove('d-none');
+                        removeBtn.querySelector('.btn-loading').classList.add('d-none');
+                        removeBtn.disabled = false;
+                    }
+                    // On success, page will reload
+                });
+            } else {
+                console.error('removeLoyaltyPointsDiscount function not available');
+                removeBtn.querySelector('.btn-text').classList.remove('d-none');
+                removeBtn.querySelector('.btn-loading').classList.add('d-none');
+                removeBtn.disabled = false;
+            }
+        });
+    }
+    
+    // Set customer email for JS functions
+    window.loyaltyCustomerEmail = '{{ loyaltyData.customerEmail }}';
+});
+</script>
+{% endblock %}

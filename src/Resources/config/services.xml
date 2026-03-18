@@ -114,6 +114,14 @@
             <tag name="kernel.event_subscriber"/>
         </service>
 
+        <!-- Checkout Subscriber for Points Redemption Block -->
+        <service id="LoyaltyEngage\Subscriber\CheckoutSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="customer.repository"/>
+            <argument type="service" id="logger"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
         <!-- Rule Conditions -->
         <service id="LoyaltyEngage\Core\Rule\CustomerTierRule">
             <tag name="shopware.rule.definition"/>
