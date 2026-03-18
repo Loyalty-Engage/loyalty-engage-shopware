@@ -314,16 +314,22 @@ class PointsRedemptionService
      */
     private function applyDiscountToCart(Cart $cart, float $discountAmount, SalesChannelContext $context): void
     {
+        $this->logger->info('Applying discount to cart', [
+            'discountAmount' => $discountAmount,
+            'cartToken' => $context->getToken()
+        ]);
+
         // Remove any existing loyalty discount first
         foreach ($cart->getLineItems() as $lineItem) {
             if ($lineItem->getType() === self::LOYALTY_DISCOUNT_LINE_ITEM_TYPE) {
-                $cart->remove($lineItem->getId());
+                $this->cartService->remove($cart, $lineItem->getId(), $context);
             }
         }
 
-        // Create discount line item
+        // Create discount line item with unique ID
+        $lineItemId = Uuid::randomHex();
         $discountLineItem = new LineItem(
-            self::LOYALTY_DISCOUNT_LINE_ITEM_KEY,
+            $lineItemId,
             self::LOYALTY_DISCOUNT_LINE_ITEM_TYPE,
             null,
             1
@@ -346,8 +352,14 @@ class PointsRedemptionService
             'appliedAt' => (new \DateTime())->format('c')
         ]);
 
-        $cart->add($discountLineItem);
-        $this->cartPersister->save($cart, $context);
+        // Use CartService to add the line item - this will recalculate the cart
+        $this->cartService->add($cart, $discountLineItem, $context);
+
+        $this->logger->info('Discount line item added to cart', [
+            'lineItemId' => $lineItemId,
+            'discountAmount' => $discountAmount,
+            'newCartTotal' => $cart->getPrice()->getTotalPrice()
+        ]);
     }
 
     /**

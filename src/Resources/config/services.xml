@@ -51,9 +51,19 @@
             <argument type="service" id="logger"/>
         </service>
 
+        <!-- Loyalty Discount Cart Collector/Processor -->
+        <service id="LoyaltyEngage\Cart\LoyaltyDiscountCollector">
+            <argument type="service" id="Shopware\Core\Checkout\Cart\Price\AbsolutePriceCalculator"/>
+            <tag name="shopware.cart.collector" priority="-5000"/>
+            <tag name="shopware.cart.processor" priority="-5000"/>
+        </service>
+
         <!-- Points Redemption Controller -->
         <service id="LoyaltyEngage\Controller\Api\PointsRedemptionController" public="true">
             <argument type="service" id="LoyaltyEngage\Service\PointsRedemptionService"/>
+            <call method="setContainer">
+                <argument type="service" id="service_container"/>
+            </call>
             <tag name="controller.service_arguments"/>
         </service>
 

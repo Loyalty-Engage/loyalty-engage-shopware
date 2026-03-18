@@ -1,8 +1,10 @@
-{# Loyalty Points Redemption Block for Checkout #}
+, {# Loyalty Points Redemption Block for Checkout #}
 {% block loyalty_points_redemption_block %}
 <div class="loyalty-points-redemption card mt-4" 
      data-loyalty-cart="true"
      data-customer-email="{{ loyaltyData.customerEmail }}"
+     data-access-key="{{ context.salesChannel.accessKey }}"
+     data-context-token="{{ context.token }}"
      id="loyalty-points-redemption-block">
     
     <div class="card-header bg-primary text-white">
@@ -145,6 +147,36 @@
 
 {# Inline JavaScript for interactivity #}
 <script>
+// Get Shopware access key from storefront config
+function getShopwareAccessKey() {
+    // Try to get from our loyalty block data attribute
+    const loyaltyBlock = document.getElementById('loyalty-points-redemption-block');
+    if (loyaltyBlock && loyaltyBlock.dataset.accessKey) return loyaltyBlock.dataset.accessKey;
+    // Try to get from window.accessKey (set by Shopware)
+    if (window.accessKey) return window.accessKey;
+    // Try to get from salesChannelId in storefront config
+    if (window.storefrontConfig && window.storefrontConfig.accessKey) return window.storefrontConfig.accessKey;
+    // Try to get from meta tag
+    const metaTag = document.querySelector('meta[name="sw-access-key"]');
+    if (metaTag) return metaTag.content;
+    return '';
+}
+
+// Get context token from various sources
+function getContextToken() {
+    // Try from our loyalty block data attribute first (most reliable)
+    const loyaltyBlock = document.getElementById('loyalty-points-redemption-block');
+    if (loyaltyBlock && loyaltyBlock.dataset.contextToken) return loyaltyBlock.dataset.contextToken;
+    // Try cookie
+    const cookieMatch = document.cookie.split('; ').find(row => row.startsWith('sw-context-token='));
+    if (cookieMatch) return cookieMatch.split('=')[1];
+    // Try localStorage
+    if (localStorage.getItem('sw-context-token')) return localStorage.getItem('sw-context-token');
+    // Try sessionStorage
+    if (sessionStorage.getItem('sw-context-token')) return sessionStorage.getItem('sw-context-token');
+    return '';
+}
+
 // Define global functions for loyalty points redemption
 window.redeemLoyaltyPoints = function(points, callback) {
     const customerEmail = window.loyaltyCustomerEmail;
@@ -154,18 +186,38 @@ window.redeemLoyaltyPoints = function(points, callback) {
         return;
     }
     
+    const accessKey = getShopwareAccessKey();
+    const contextToken = getContextToken();
+    
+    console.log('Access Key:', accessKey);
+    console.log('Context Token:', contextToken);
+    
     fetch('/store-api/loyalty/redeem-points', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'sw-access-key': document.querySelector('meta[name="sw-access-key"]')?.content || ''
+            'sw-access-key': accessKey,
+            'sw-context-token': contextToken
         },
         body: JSON.stringify({
             points: points
         })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json().then(data => ({ status: response.status, data }));
+    })
+    .then(({ status, data }) => {
+        console.log('Response data:', data);
+        
+        // Check for Shopware error format
+        if (data.errors && data.errors.length > 0) {
+            const errorMessage = data.errors[0].detail || data.errors[0].title || 'Unknown error';
+            alert('Error: ' + errorMessage);
+            if (callback) callback(false, data);
+            return;
+        }
+        
         if (data.success) {
             // Reload page to show updated cart
             window.location.reload();
@@ -176,17 +228,21 @@ window.redeemLoyaltyPoints = function(points, callback) {
     })
     .catch(error => {
         console.error('Error redeeming points:', error);
-        alert('An error occurred while redeeming points');
+        alert('An error occurred while redeeming points: ' + error.message);
         if (callback) callback(false, null);
     });
 };
 
 window.removeLoyaltyPointsDiscount = function(callback) {
+    const accessKey = getShopwareAccessKey();
+    const contextToken = getContextToken();
+    
     fetch('/store-api/loyalty/redeem-points', {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
-            'sw-access-key': document.querySelector('meta[name="sw-access-key"]')?.content || ''
+            'sw-access-key': accessKey,
+            'sw-context-token': contextToken
         }
     })
     .then(response => response.json())

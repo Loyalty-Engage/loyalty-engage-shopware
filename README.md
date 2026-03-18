@@ -8,6 +8,13 @@ Integrate your Shopware 6 store with the LoyaltyEngage loyalty system, enabling 
 
 ## 🚀 Features
 
+- **🎁 Points Redemption in Checkout** (NEW in v1.3.0): 
+  - Customers can redeem loyalty points for discounts directly in the checkout
+  - Configurable points-to-euro conversion rate
+  - Minimum/maximum points limits per order
+  - Maximum discount percentage of cart total
+  - Beautiful UI block in cart page showing available points
+  - Quick-select buttons for common redemption amounts
 - **Loyalty Cart Management**: Customers can add products to their cart using loyalty points
 - **Discount Claiming**: Automatic discount application after adding products to loyalty cart
 - **Event Tracking**: 
@@ -18,6 +25,7 @@ Integrate your Shopware 6 store with the LoyaltyEngage loyalty system, enabling 
 - **Order Placement**: Automated order placement in the LoyaltyEngage system
 - **API Integration**: Full integration with LoyaltyEngage API
 - **Async Processing**: Message queue support for reliable event processing
+- **Rule Builder Conditions**: Use customer tier, points, and coins in Shopware's rule builder
 
 ## 📋 Requirements
 
@@ -51,13 +59,25 @@ bin/console cache:clear
 1. Navigate to **Settings > System > Plugins > LoyaltyEngage > Configuration**
 2. Enter your LoyaltyEngage API credentials:
    - API URL (default: `https://app.loyaltyengage.tech`)
-   - Tenant ID
-   - Bearer Token
-3. Configure settings:
-   - Cart expiry time (minutes)
+   - Client ID (Tenant ID)
+   - Client Secret (Bearer Token)
+3. Configure general settings:
+   - Cart expiry time (hours)
    - Order retry limit
    - Enable logging (recommended for development)
    - Enable purchase/return event export
+
+### Points Redemption Settings (v1.3.0+)
+
+4. Configure Points Redemption:
+   - **Enable Points Redemption**: Toggle to show/hide the redemption block in checkout
+   - **Discount Product SKU**: The SKU of the €1 discount product in LoyaltyEngage (required)
+   - **Points per Euro**: How many points equal €1 discount (default: 1)
+   - **Minimum Points to Redeem**: Minimum points required per redemption (default: 1)
+   - **Maximum Points per Order**: Maximum points that can be redeemed per order (0 = unlimited)
+   - **Maximum Discount Percentage**: Maximum % of cart total that can be paid with points (0 = unlimited)
+
+> **Important**: You must create a discount product in LoyaltyEngage with a value of €1. When customers redeem points, the plugin purchases this product multiple times (e.g., 10 times for €10 discount).
 
 ## 📖 Usage
 
