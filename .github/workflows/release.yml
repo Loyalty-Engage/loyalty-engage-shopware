@@ -22,8 +22,15 @@ jobs:
         # Remove unnecessary files
         rm -rf .git .github .DS_Store
         
-        # Create ZIP with correct structure
+        # Get the current directory name (repo checkout name)
+        CURRENT_DIR=$(basename "$PWD")
+        
+        # Create ZIP with correct structure (rename to LoyaltyEngage)
         cd ..
+        
+        # Rename the checkout directory to LoyaltyEngage for correct ZIP structure
+        mv "$CURRENT_DIR" LoyaltyEngage
+        
         zip -r LoyaltyEngage-${{ steps.get_version.outputs.VERSION }}.zip LoyaltyEngage \
           -x "*.git*" \
           -x "*node_modules*" \
