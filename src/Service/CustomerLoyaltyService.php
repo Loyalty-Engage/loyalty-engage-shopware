@@ -2,6 +2,7 @@
 
 namespace LoyaltyEngage\Service;
 
+use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -54,37 +55,38 @@ class CustomerLoyaltyService
             // Find customer by email
             $criteria = new Criteria();
             $criteria->addFilter(new EqualsFilter('email', $email));
-            
+
+            /** @var CustomerEntity|null $customer */
             $customer = $this->customerRepository->search($criteria, $context)->first();
 
             if (!$customer) {
-                $this->logger->warning('Customer not found for loyalty update', ['email' => $email]);
+                $this->logger->warning('LoyaltyEngage: Customer not found for loyalty update', ['email' => $email]);
                 return [
                     'success' => false,
-                    'message' => 'Customer not found with email: ' . $email
+                    'message' => 'Customer not found'
                 ];
             }
 
             // Prepare custom fields data
             $customFields = $customer->getCustomFields() ?? [];
-            
+
             // Update loyalty fields if provided
             if (isset($loyaltyData['le_current_tier'])) {
                 $customFields['le_current_tier'] = $loyaltyData['le_current_tier'];
             }
-            
+
             if (isset($loyaltyData['le_points'])) {
                 $customFields['le_points'] = (int) $loyaltyData['le_points'];
             }
-            
+
             if (isset($loyaltyData['le_available_coins'])) {
                 $customFields['le_available_coins'] = (int) $loyaltyData['le_available_coins'];
             }
-            
+
             if (isset($loyaltyData['le_next_tier'])) {
                 $customFields['le_next_tier'] = $loyaltyData['le_next_tier'];
             }
-            
+
             if (isset($loyaltyData['le_points_to_next_tier'])) {
                 $customFields['le_points_to_next_tier'] = (int) $loyaltyData['le_points_to_next_tier'];
             }
@@ -97,9 +99,8 @@ class CustomerLoyaltyService
                 ]
             ], $context);
 
-            $this->logger->info('Customer loyalty data updated successfully', [
-                'customerId' => $customer->getId(),
-                'email' => $email
+            $this->logger->info('LoyaltyEngage: Customer loyalty data updated successfully', [
+                'customerId' => $customer->getId()
             ]);
 
             return [
@@ -109,7 +110,7 @@ class CustomerLoyaltyService
             ];
 
         } catch (\Throwable $e) {
-            $this->logger->error('Error updating customer loyalty data', [
+            $this->logger->error('LoyaltyEngage: Error updating customer loyalty data', [
                 'email' => $email,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -117,7 +118,7 @@ class CustomerLoyaltyService
 
             return [
                 'success' => false,
-                'message' => 'Error updating customer loyalty data: ' . $e->getMessage()
+                'message' => 'An error occurred while updating customer loyalty data'
             ];
         }
     }
@@ -143,13 +144,14 @@ class CustomerLoyaltyService
             // Find customer by email
             $criteria = new Criteria();
             $criteria->addFilter(new EqualsFilter('email', $email));
-            
+
+            /** @var CustomerEntity|null $customer */
             $customer = $this->customerRepository->search($criteria, $context)->first();
 
             if (!$customer) {
                 return [
                     'success' => false,
-                    'message' => 'Customer not found with email: ' . $email
+                    'message' => 'Customer not found'
                 ];
             }
 
@@ -169,14 +171,14 @@ class CustomerLoyaltyService
             ];
 
         } catch (\Throwable $e) {
-            $this->logger->error('Error getting customer loyalty data', [
+            $this->logger->error('LoyaltyEngage: Error getting customer loyalty data', [
                 'email' => $email,
                 'error' => $e->getMessage()
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Error getting customer loyalty data: ' . $e->getMessage()
+                'message' => 'An error occurred while retrieving customer loyalty data'
             ];
         }
     }

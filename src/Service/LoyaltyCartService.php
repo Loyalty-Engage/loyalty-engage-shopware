@@ -10,18 +10,20 @@ use Shopware\Core\Checkout\Cart\LineItem\LineItemCollection;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
+use Shopware\Core\Checkout\Promotion\PromotionEntity;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\Validation\DataBag\RequestDataBag;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
+use Shopware\Core\System\SalesChannel\SalesChannelEntity;
 use Psr\Log\LoggerInterface;
 
 class LoyaltyCartService
 {
     private const HTTP_OK = 200;
-    private const HTTP_BAD_REQUEST = 401;
+    private const HTTP_BAD_REQUEST = 400;
 
     /**
      * @var CartService
@@ -251,7 +253,7 @@ class LoyaltyCartService
             $discountAmount = $discountResult['discount'] ?? $discount;
 
             // Step 3: Ensure promotion exists
-            $promotionId = $this->ensurePromotionExists($discountCode, $discountAmount, $context->getContext());
+            $promotionId = $this->ensurePromotionExists($discountCode, $discountAmount, $context);
 
             // Step 4: Add product to cart
             $addResult = $this->addProduct($email, $productId, $context);
@@ -280,12 +282,15 @@ class LoyaltyCartService
     /**
      * Ensure a promotion exists with the given code and discount
      */
-    private function ensurePromotionExists(string $code, float $discountRate, Context $context): string
+    private function ensurePromotionExists(string $code, float $discountRate, SalesChannelContext $salesChannelContext): string
     {
+        $context = $salesChannelContext->getContext();
+
         try {
             // Check if promotion with this code already exists
             $criteria = new Criteria();
             $criteria->addFilter(new EqualsFilter('code', $code));
+            /** @var PromotionEntity|null $existingPromotion */
             $existingPromotion = $this->promotionRepository->search($criteria, $context)->first();
 
             if ($existingPromotion) {
@@ -306,7 +311,7 @@ class LoyaltyCartService
                     'useIndividualCodes' => false,
                     'code' => $code,
                     'salesChannels' => [
-                        ['salesChannelId' => $context->getSource()->getSalesChannelId(), 'priority' => 1]
+                        ['salesChannelId' => $salesChannelContext->getSalesChannelId(), 'priority' => 1]
                     ],
                     'discounts' => [
                         [

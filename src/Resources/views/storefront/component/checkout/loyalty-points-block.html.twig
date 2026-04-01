@@ -1,8 +1,7 @@
-, {# Loyalty Points Redemption Block for Checkout #}
+{# Loyalty Points Redemption Block for Checkout #}
 {% block loyalty_points_redemption_block %}
 <div class="loyalty-points-redemption card mt-4" 
      data-loyalty-cart="true"
-     data-customer-email="{{ loyaltyData.customerEmail }}"
      data-access-key="{{ context.salesChannel.accessKey }}"
      data-context-token="{{ context.token }}"
      id="loyalty-points-redemption-block">
@@ -149,14 +148,10 @@
 <script>
 // Get Shopware access key from storefront config
 function getShopwareAccessKey() {
-    // Try to get from our loyalty block data attribute
     const loyaltyBlock = document.getElementById('loyalty-points-redemption-block');
     if (loyaltyBlock && loyaltyBlock.dataset.accessKey) return loyaltyBlock.dataset.accessKey;
-    // Try to get from window.accessKey (set by Shopware)
     if (window.accessKey) return window.accessKey;
-    // Try to get from salesChannelId in storefront config
     if (window.storefrontConfig && window.storefrontConfig.accessKey) return window.storefrontConfig.accessKey;
-    // Try to get from meta tag
     const metaTag = document.querySelector('meta[name="sw-access-key"]');
     if (metaTag) return metaTag.content;
     return '';
@@ -164,34 +159,19 @@ function getShopwareAccessKey() {
 
 // Get context token from various sources
 function getContextToken() {
-    // Try from our loyalty block data attribute first (most reliable)
     const loyaltyBlock = document.getElementById('loyalty-points-redemption-block');
     if (loyaltyBlock && loyaltyBlock.dataset.contextToken) return loyaltyBlock.dataset.contextToken;
-    // Try cookie
     const cookieMatch = document.cookie.split('; ').find(row => row.startsWith('sw-context-token='));
     if (cookieMatch) return cookieMatch.split('=')[1];
-    // Try localStorage
     if (localStorage.getItem('sw-context-token')) return localStorage.getItem('sw-context-token');
-    // Try sessionStorage
     if (sessionStorage.getItem('sw-context-token')) return sessionStorage.getItem('sw-context-token');
     return '';
 }
 
-// Define global functions for loyalty points redemption
 window.redeemLoyaltyPoints = function(points, callback) {
-    const customerEmail = window.loyaltyCustomerEmail;
-    if (!customerEmail) {
-        alert('Customer email not found');
-        if (callback) callback(false, null);
-        return;
-    }
-    
     const accessKey = getShopwareAccessKey();
     const contextToken = getContextToken();
-    
-    console.log('Access Key:', accessKey);
-    console.log('Context Token:', contextToken);
-    
+
     fetch('/store-api/loyalty/redeem-points', {
         method: 'POST',
         headers: {
@@ -199,27 +179,17 @@ window.redeemLoyaltyPoints = function(points, callback) {
             'sw-access-key': accessKey,
             'sw-context-token': contextToken
         },
-        body: JSON.stringify({
-            points: points
-        })
+        body: JSON.stringify({ points: points })
     })
-    .then(response => {
-        console.log('Response status:', response.status);
-        return response.json().then(data => ({ status: response.status, data }));
-    })
+    .then(response => response.json().then(data => ({ status: response.status, data })))
     .then(({ status, data }) => {
-        console.log('Response data:', data);
-        
-        // Check for Shopware error format
         if (data.errors && data.errors.length > 0) {
             const errorMessage = data.errors[0].detail || data.errors[0].title || 'Unknown error';
             alert('Error: ' + errorMessage);
             if (callback) callback(false, data);
             return;
         }
-        
         if (data.success) {
-            // Reload page to show updated cart
             window.location.reload();
         } else {
             alert(data.message || 'Failed to redeem points');
@@ -227,8 +197,7 @@ window.redeemLoyaltyPoints = function(points, callback) {
         }
     })
     .catch(error => {
-        console.error('Error redeeming points:', error);
-        alert('An error occurred while redeeming points: ' + error.message);
+        alert('An error occurred while redeeming points.');
         if (callback) callback(false, null);
     });
 };
@@ -236,7 +205,7 @@ window.redeemLoyaltyPoints = function(points, callback) {
 window.removeLoyaltyPointsDiscount = function(callback) {
     const accessKey = getShopwareAccessKey();
     const contextToken = getContextToken();
-    
+
     fetch('/store-api/loyalty/redeem-points', {
         method: 'DELETE',
         headers: {
@@ -248,7 +217,6 @@ window.removeLoyaltyPointsDiscount = function(callback) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Reload page to show updated cart
             window.location.reload();
         } else {
             alert(data.message || 'Failed to remove discount');
@@ -256,8 +224,7 @@ window.removeLoyaltyPointsDiscount = function(callback) {
         }
     })
     .catch(error => {
-        console.error('Error removing discount:', error);
-        alert('An error occurred while removing discount');
+        alert('An error occurred while removing discount.');
         if (callback) callback(false, null);
     });
 };
@@ -269,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const redeemBtn = document.getElementById('loyalty-redeem-btn');
     const removeBtn = document.getElementById('loyalty-remove-discount-btn');
     const pointsPerEuro = {{ loyaltyData.pointsPerEuro }};
-    
+
     // Update preview when input changes
     if (pointsInput && previewAmount) {
         pointsInput.addEventListener('input', function() {
@@ -278,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
             previewAmount.textContent = '-€' + discount.toFixed(2).replace('.', ',');
         });
     }
-    
+
     // Quick select buttons
     quickSelectButtons.forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -289,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Redeem button click
     if (redeemBtn) {
         redeemBtn.addEventListener('click', function() {
@@ -298,62 +265,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('{{ "loyaltyEngage.checkout.enterValidPoints"|trans|sw_sanitize }}');
                 return;
             }
-            
-            // Show loading state
+
             redeemBtn.querySelector('.btn-text').classList.add('d-none');
             redeemBtn.querySelector('.btn-loading').classList.remove('d-none');
             redeemBtn.disabled = true;
-            
-            // Call the redeem function
+
             if (typeof window.redeemLoyaltyPoints === 'function') {
                 window.redeemLoyaltyPoints(points, function(success, result) {
                     if (!success) {
-                        // Reset button state on error
                         redeemBtn.querySelector('.btn-text').classList.remove('d-none');
                         redeemBtn.querySelector('.btn-loading').classList.add('d-none');
                         redeemBtn.disabled = false;
                     }
-                    // On success, page will reload
                 });
             } else {
-                console.error('redeemLoyaltyPoints function not available');
                 redeemBtn.querySelector('.btn-text').classList.remove('d-none');
                 redeemBtn.querySelector('.btn-loading').classList.add('d-none');
                 redeemBtn.disabled = false;
             }
         });
     }
-    
+
     // Remove discount button click
     if (removeBtn) {
         removeBtn.addEventListener('click', function() {
-            // Show loading state
             removeBtn.querySelector('.btn-text').classList.add('d-none');
             removeBtn.querySelector('.btn-loading').classList.remove('d-none');
             removeBtn.disabled = true;
-            
-            // Call the remove function
+
             if (typeof window.removeLoyaltyPointsDiscount === 'function') {
                 window.removeLoyaltyPointsDiscount(function(success, result) {
                     if (!success) {
-                        // Reset button state on error
                         removeBtn.querySelector('.btn-text').classList.remove('d-none');
                         removeBtn.querySelector('.btn-loading').classList.add('d-none');
                         removeBtn.disabled = false;
                     }
-                    // On success, page will reload
                 });
             } else {
-                console.error('removeLoyaltyPointsDiscount function not available');
                 removeBtn.querySelector('.btn-text').classList.remove('d-none');
                 removeBtn.querySelector('.btn-loading').classList.add('d-none');
                 removeBtn.disabled = false;
             }
         });
     }
-    
-    // Set customer email for JS functions
-    window.loyaltyCustomerEmail = '{{ loyaltyData.customerEmail }}';
 });
 </script>
 {% endblock %}

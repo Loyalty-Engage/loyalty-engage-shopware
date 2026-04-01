@@ -5,8 +5,9 @@ namespace LoyaltyEngage\Subscriber;
 use LoyaltyEngage\Message\ReturnMessage;
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Psr\Log\LoggerInterface;
+use Shopware\Core\Checkout\Order\Aggregate\OrderDelivery\OrderDeliveryEntity;
 use Shopware\Core\Checkout\Order\OrderEntity;
-use Shopware\Core\Framework\Context;
+use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
@@ -31,13 +32,10 @@ class ReturnSubscriber implements EventSubscriberInterface
         $this->orderDeliveryRepository = $orderDeliveryRepository;
         $this->logger = $logger;
         $this->messageBus = $messageBus;
-
-        file_put_contents('/tmp/return_subscriber.txt', '🔧 ReturnSubscriber constructed at ' . date('c') . "\n", FILE_APPEND);
     }
 
     public static function getSubscribedEvents(): array
     {
-        file_put_contents('/tmp/return_subscriber.txt', "📌 getSubscribedEvents triggered\n", FILE_APPEND);
         return [
             StateMachineTransitionEvent::class => 'onDeliveryReturned'
         ];
@@ -45,38 +43,31 @@ class ReturnSubscriber implements EventSubscriberInterface
 
     public function onDeliveryReturned(StateMachineTransitionEvent $event): void
     {
-        file_put_contents('/tmp/return_subscriber.txt', "🚀 onDeliveryReturned called\n", FILE_APPEND);
-
         try {
             if (
                 $event->getEntityName() !== 'order_delivery' ||
                 $event->getToPlace()->getTechnicalName() !== 'returned'
             ) {
-                file_put_contents('/tmp/return_subscriber.txt', "⛔️ Not a delivery/returned transition. Skipping.\n", FILE_APPEND);
                 return;
             }
 
             $deliveryId = $event->getEntityId();
-            file_put_contents('/tmp/return_subscriber.txt', "➡️ Delivery ID: $deliveryId\n", FILE_APPEND);
 
             if (!$this->loyaltyEngageApiService->isReturnExportEnabled()) {
-                file_put_contents('/tmp/return_subscriber.txt', "🚫 Return export disabled. Exiting early.\n", FILE_APPEND);
                 return;
             }
 
-            file_put_contents('/tmp/return_subscriber.txt', "✅ Return export is ENABLED.\n", FILE_APPEND);
-
             $criteria = new Criteria([$deliveryId]);
-            $criteria->addFilter(new EqualsFilter('versionId', '0fa91ce3e96a4bc2be4bd9ce752c3425'));
+            $criteria->addFilter(new EqualsFilter('versionId', Defaults::LIVE_VERSION));
             $criteria->addAssociation('order');
             $criteria->addAssociation('order.lineItems');
             $criteria->addAssociation('order.orderCustomer');
 
+            /** @var OrderDeliveryEntity|null $delivery */
             $delivery = $this->orderDeliveryRepository->search($criteria, $event->getContext())->first();
 
             if (!$delivery || !$delivery->getOrder()) {
-                file_put_contents('/tmp/return_subscriber.txt', "❌ Delivery or order not found\n", FILE_APPEND);
-                $this->logger->error('Delivery or order not found', ['deliveryId' => $deliveryId]);
+                $this->logger->error('LoyaltyEngage: Delivery or order not found', ['deliveryId' => $deliveryId]);
                 return;
             }
 
@@ -85,8 +76,7 @@ class ReturnSubscriber implements EventSubscriberInterface
             $customer = $order->getOrderCustomer();
 
             if (!$customer || !$customer->getEmail()) {
-                file_put_contents('/tmp/return_subscriber.txt', "❌ Customer or email missing\n", FILE_APPEND);
-                $this->logger->error('Missing customer or email', ['orderId' => $order->getId()]);
+                $this->logger->error('LoyaltyEngage: Missing customer or email', ['orderId' => $order->getId()]);
                 return;
             }
 
@@ -100,8 +90,7 @@ class ReturnSubscriber implements EventSubscriberInterface
                 }
 
                 if (!$lineItem->getProductId()) {
-                    file_put_contents('/tmp/return_subscriber.txt', "⚠️ Line item missing product ID\n", FILE_APPEND);
-                    $this->logger->warning('Missing product ID on line item', [
+                    $this->logger->warning('LoyaltyEngage: Missing product ID on line item', [
                         'orderId' => $order->getId(),
                         'lineItemId' => $lineItem->getId()
                     ]);
@@ -116,26 +105,20 @@ class ReturnSubscriber implements EventSubscriberInterface
             }
 
             if (empty($products)) {
-                file_put_contents('/tmp/return_subscriber.txt', "❌ No valid products found\n", FILE_APPEND);
-                $this->logger->error('No valid product line items', ['orderId' => $order->getId()]);
+                $this->logger->error('LoyaltyEngage: No valid product line items found', ['orderId' => $order->getId()]);
                 return;
             }
 
-            // Create and dispatch a return message to be processed asynchronously
             $message = new ReturnMessage($email, $returnDate, $products);
-            
-            $this->logger->info('Dispatching return message to queue', [
-                'email' => $email,
+
+            $this->logger->info('LoyaltyEngage: Dispatching return message to queue', [
                 'returnDate' => $returnDate
             ]);
-            
-            file_put_contents('/tmp/return_subscriber.txt', "✅ Dispatching return message to queue\n", FILE_APPEND);
-            
+
             $this->messageBus->dispatch($message);
 
         } catch (\Throwable $e) {
-            file_put_contents('/tmp/return_subscriber.txt', "❌ Crash: " . $e->getMessage() . "\n", FILE_APPEND);
-            $this->logger->error('Fatal error in onDeliveryReturned()', [
+            $this->logger->error('LoyaltyEngage: Fatal error in onDeliveryReturned()', [
                 'error' => $e->getMessage()
             ]);
         }

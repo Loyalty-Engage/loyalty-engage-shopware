@@ -11,6 +11,8 @@ use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 class LoyaltyEngageApiService
 {
     private const HTTP_OK = 200;
+    private const DEFAULT_API_URL = 'https://app.loyaltyengage.tech';
+    private const REQUIRED_API_BASE = 'https://app.loyaltyengage.tech';
 
     /**
      * @var SystemConfigService
@@ -107,294 +109,6 @@ class LoyaltyEngageApiService
     }
 
     /**
-     * Generate Basic Auth string
-     */
-    private function getBasicAuth(): string
-    {
-        $tenantId = $this->getTenantId();
-        $bearerToken = $this->getBearerToken();
-
-        return base64_encode($tenantId . ':' . $bearerToken);
-    }
-
-    /**
-     * Add a product to the loyalty cart
-     */
-    public function addToCart(string $email, string $sku): int
-    {
-        // Get the base URL from config, or use the default if not set
-        $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/loyalty/shop/' . $email . '/cart/add';
-        $payload = [
-            'sku' => $sku,
-            'quantity' => 1
-        ];
-
-        try {
-            $response = $this->httpClient->request('POST', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
-                'json' => $payload,
-            ]);
-
-            $statusCode = $response->getStatusCode();
-            $content = $response->getContent(false);
-
-            // Log if logging is enabled in config
-            if ($this->getLoggerStatus()) {
-                $this->logger->info('LoyaltyEngage Add to Cart Response:', [
-                    'email' => $email,
-                    'sku' => $sku,
-                    'quantity' => 1,
-                    'response_code' => $statusCode,
-                    'response_body' => $content
-                ]);
-            }
-
-            return $statusCode;
-        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage Add to Cart Error:', [
-                    'email' => $email,
-                    'sku' => $sku,
-                    'error' => $e->getMessage()
-                ]);
-            }
-            return 0;
-        }
-    }
-
-    /**
-     * Remove a product from the loyalty cart
-     */
-    public function removeItem(string $email, string $sku, int $quantity): ?int
-    {
-        // Get the base URL from config, or use the default if not set
-        $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/loyalty/shop/' . $email . '/cart/remove';
-        $data = [
-            'sku' => $sku,
-            'quantity' => $quantity
-        ];
-
-        try {
-            $response = $this->httpClient->request('DELETE', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
-                'json' => $data,
-            ]);
-
-            return $response->getStatusCode();
-        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage Remove Item Error:', [
-                    'email' => $email,
-                    'sku' => $sku,
-                    'error' => $e->getMessage()
-                ]);
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Remove all products from the loyalty cart
-     */
-    public function removeAllItems(string $email): ?int
-    {
-        // Get the base URL from config, or use the default if not set
-        $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/loyalty/shop/' . $email . '/cart';
-
-        try {
-            $response = $this->httpClient->request('DELETE', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
-            ]);
-
-            return $response->getStatusCode();
-        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage Remove All Items Error:', [
-                    'email' => $email,
-                    'error' => $e->getMessage()
-                ]);
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Place an order in the loyalty system
-     */
-    public function placeOrder(string $email, string $orderId, array $products): ?int
-    {
-        // Get the base URL from config, or use the default if not set
-        $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/loyalty/shop/' . $email . '/cart/purchase';
-        $data = [
-            'orderId' => $orderId,
-            'products' => $products
-        ];
-
-        try {
-            $response = $this->httpClient->request('POST', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
-                'json' => $data,
-            ]);
-
-            return $response->getStatusCode();
-        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage Place Order Error:', [
-                    'email' => $email,
-                    'orderId' => $orderId,
-                    'error' => $e->getMessage()
-                ]);
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Send event to the loyalty system
-     */
-    public function sendEvent(array $payload): ?int
-    {
-        // Get the base URL from config, or use the default if not set
-        $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/events';
-
-        // Always log the event being sent for debugging
-        $this->logger->info('LoyaltyEngage sending event to API', [
-            'url' => $url,
-            'payload' => $payload,
-            'apiUrl' => $apiUrl,
-            'tenantId' => $this->getTenantId(),
-            'loggerEnabled' => $this->getLoggerStatus()
-        ]);
-
-        try {
-            $response = $this->httpClient->request('POST', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
-                'json' => $payload,
-            ]);
-
-            $statusCode = $response->getStatusCode();
-            $content = $response->getContent(false);
-
-            // Always log the response for debugging
-            $this->logger->info('LoyaltyEngage API response', [
-                'statusCode' => $statusCode,
-                'content' => $content
-            ]);
-
-            return $statusCode;
-        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            // Always log errors for debugging
-            $this->logger->error('LoyaltyEngage Send Event Error:', [
-                'url' => $url,
-                'payload' => $payload,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return null;
-        }
-    }
-
-    /**
      * Check if Points Redemption is enabled
      */
     public function isPointsRedemptionEnabled(): bool
@@ -443,52 +157,62 @@ class LoyaltyEngageApiService
     }
 
     /**
-     * Buy a discount code product from the loyalty system
-     * This endpoint is used to purchase discount codes using loyalty points/coins
-     * 
-     * @param string $email Customer email/identifier
-     * @param string $sku SKU of the discount code product
-     * @return array|null Response with discount code info or null on failure
+     * Get the validated and sanitized API base URL.
+     * Always returns a URL starting with the required base.
      */
-    public function buyDiscountCodeProduct(string $email, string $sku): ?array
+    private function getValidatedApiUrl(): string
     {
-        // Get the base URL from config, or use the default if not set
         $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/buy_discount_code';
-        $payload = [
-            'sku' => $sku
-        ];
 
-        if ($this->getLoggerStatus()) {
-            $this->logger->info('LoyaltyEngage buying discount code product', [
-                'url' => $url,
-                'email' => $email,
-                'sku' => $sku
-            ]);
+        if (!$apiUrl || strpos($apiUrl, self::REQUIRED_API_BASE) !== 0) {
+            if ($apiUrl) {
+                $this->logger->warning('LoyaltyEngage: API URL does not match required base, using default', [
+                    'configuredUrl' => $apiUrl,
+                    'defaultUrl' => self::DEFAULT_API_URL
+                ]);
+            }
+            return self::DEFAULT_API_URL;
         }
+
+        return rtrim($apiUrl, '/');
+    }
+
+    /**
+     * Generate Basic Auth string
+     */
+    private function getBasicAuth(): string
+    {
+        $tenantId = $this->getTenantId();
+        $bearerToken = $this->getBearerToken();
+
+        return base64_encode($tenantId . ':' . $bearerToken);
+    }
+
+    /**
+     * Get default HTTP headers for API requests
+     */
+    private function getDefaultHeaders(): array
+    {
+        return [
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Basic ' . $this->getBasicAuth(),
+        ];
+    }
+
+    /**
+     * Add a product to the loyalty cart
+     */
+    public function addToCart(string $email, string $sku): int
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/add';
+        $payload = [
+            'sku' => $sku,
+            'quantity' => 1
+        ];
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
+                'headers' => $this->getDefaultHeaders(),
                 'json' => $payload,
             ]);
 
@@ -496,20 +220,184 @@ class LoyaltyEngageApiService
             $content = $response->getContent(false);
 
             if ($this->getLoggerStatus()) {
-                $this->logger->info('LoyaltyEngage Buy Discount Code Response:', [
-                    'email' => $email,
+                $this->logger->info('LoyaltyEngage: Add to Cart Response', [
                     'sku' => $sku,
                     'response_code' => $statusCode,
                     'response_body' => $content
                 ]);
             }
 
-            if ($statusCode !== 200) {
-                $this->logger->error('LoyaltyEngage Buy Discount Code failed', [
-                    'email' => $email,
+            return $statusCode;
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            if ($this->getLoggerStatus()) {
+                $this->logger->error('LoyaltyEngage: Add to Cart Error', [
                     'sku' => $sku,
-                    'statusCode' => $statusCode,
-                    'response' => $content
+                    'error' => $e->getMessage()
+                ]);
+            }
+            return 0;
+        }
+    }
+
+    /**
+     * Remove a product from the loyalty cart
+     */
+    public function removeItem(string $email, string $sku, int $quantity): ?int
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/remove';
+        $data = [
+            'sku' => $sku,
+            'quantity' => $quantity
+        ];
+
+        try {
+            $response = $this->httpClient->request('DELETE', $url, [
+                'headers' => $this->getDefaultHeaders(),
+                'json' => $data,
+            ]);
+
+            return $response->getStatusCode();
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            if ($this->getLoggerStatus()) {
+                $this->logger->error('LoyaltyEngage: Remove Item Error', [
+                    'sku' => $sku,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Remove all products from the loyalty cart
+     */
+    public function removeAllItems(string $email): ?int
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart';
+
+        try {
+            $response = $this->httpClient->request('DELETE', $url, [
+                'headers' => $this->getDefaultHeaders(),
+            ]);
+
+            return $response->getStatusCode();
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            if ($this->getLoggerStatus()) {
+                $this->logger->error('LoyaltyEngage: Remove All Items Error', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Place an order in the loyalty system
+     */
+    public function placeOrder(string $email, string $orderId, array $products): ?int
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/purchase';
+        $data = [
+            'orderId' => $orderId,
+            'products' => $products
+        ];
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => $this->getDefaultHeaders(),
+                'json' => $data,
+            ]);
+
+            return $response->getStatusCode();
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            if ($this->getLoggerStatus()) {
+                $this->logger->error('LoyaltyEngage: Place Order Error', [
+                    'orderId' => $orderId,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Send event to the loyalty system
+     */
+    public function sendEvent(array $payload): ?int
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/events';
+
+        $this->logger->info('LoyaltyEngage: Sending event to API', [
+            'url' => $url,
+            'payload' => $payload,
+        ]);
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => $this->getDefaultHeaders(),
+                'json' => $payload,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $content = $response->getContent(false);
+
+            $this->logger->info('LoyaltyEngage: API event response', [
+                'statusCode' => $statusCode,
+                'content' => $content
+            ]);
+
+            return $statusCode;
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage: Send Event Error', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Buy a discount code product from the loyalty system
+     *
+     * @param string $email Customer email/identifier
+     * @param string $sku SKU of the discount code product
+     * @return array|null Response with discount code info or null on failure
+     */
+    public function buyDiscountCodeProduct(string $email, string $sku): ?array
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/buy_discount_code';
+        $payload = [
+            'sku' => $sku
+        ];
+
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: Buying discount code product', [
+                'sku' => $sku
+            ]);
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => $this->getDefaultHeaders(),
+                'json' => $payload,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $content = $response->getContent(false);
+
+            if ($this->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage: Buy Discount Code Response', [
+                    'sku' => $sku,
+                    'response_code' => $statusCode,
+                    'response_body' => $content
+                ]);
+            }
+
+            if ($statusCode !== self::HTTP_OK) {
+                $this->logger->error('LoyaltyEngage: Buy Discount Code failed', [
+                    'sku' => $sku,
+                    'statusCode' => $statusCode
                 ]);
                 return null;
             }
@@ -517,8 +405,7 @@ class LoyaltyEngageApiService
             $result = json_decode($content, true);
             return $result ?: ['success' => true, 'statusCode' => $statusCode];
         } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            $this->logger->error('LoyaltyEngage Buy Discount Code Error:', [
-                'email' => $email,
+            $this->logger->error('LoyaltyEngage: Buy Discount Code Error', [
                 'sku' => $sku,
                 'error' => $e->getMessage()
             ]);
@@ -528,7 +415,7 @@ class LoyaltyEngageApiService
 
     /**
      * Buy multiple discount code products (for redeeming multiple points)
-     * 
+     *
      * @param string $email Customer email/identifier
      * @param string $sku SKU of the discount code product
      * @param int $quantity Number of times to purchase the discount product
@@ -542,8 +429,7 @@ class LoyaltyEngageApiService
         $discountCodes = [];
 
         if ($this->getLoggerStatus()) {
-            $this->logger->info('LoyaltyEngage buying multiple discount code products', [
-                'email' => $email,
+            $this->logger->info('LoyaltyEngage: Buying multiple discount code products', [
                 'sku' => $sku,
                 'quantity' => $quantity
             ]);
@@ -551,12 +437,11 @@ class LoyaltyEngageApiService
 
         for ($i = 0; $i < $quantity; $i++) {
             $result = $this->buyDiscountCodeProduct($email, $sku);
-            
+
             if ($result !== null) {
                 $successCount++;
                 $results[] = $result;
-                
-                // Extract discount code if present in response
+
                 if (isset($result['discountCode'])) {
                     $discountCodes[] = $result['discountCode'];
                 } elseif (isset($result['code'])) {
@@ -564,9 +449,7 @@ class LoyaltyEngageApiService
                 }
             } else {
                 $failCount++;
-                // Stop on first failure to prevent partial redemptions
-                $this->logger->warning('LoyaltyEngage stopping bulk purchase due to failure', [
-                    'email' => $email,
+                $this->logger->warning('LoyaltyEngage: Stopping bulk purchase due to failure', [
                     'sku' => $sku,
                     'successCount' => $successCount,
                     'failedAt' => $i + 1,
@@ -591,41 +474,18 @@ class LoyaltyEngageApiService
      */
     public function claimDiscount(string $email, float $discount): ?array
     {
-        // Get the base URL from config, or use the default if not set
-        $apiUrl = $this->getApiUrl();
-        if (!$apiUrl) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL not set in config, using default', [
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        // Ensure the URL starts with https://app.loyaltyengage.tech
-        if (strpos($apiUrl, 'https://app.loyaltyengage.tech') !== 0) {
-            $apiUrl = 'https://app.loyaltyengage.tech';
-            $this->logger->warning('LoyaltyEngage API URL does not start with the required base URL, using default', [
-                'configuredUrl' => $this->getApiUrl(),
-                'defaultUrl' => $apiUrl
-            ]);
-        }
-        
-        $url = rtrim($apiUrl, '/') . '/api/v1/discount/' . $email . '/claim';
+        $url = $this->getValidatedApiUrl() . '/api/v1/discount/' . urlencode($email) . '/claim';
         $payload = ['discount' => $discount];
 
         if ($this->getLoggerStatus()) {
-            $this->logger->info('LoyaltyEngage claiming discount', [
-                'url' => $url,
-                'email' => $email,
+            $this->logger->info('LoyaltyEngage: Claiming discount', [
                 'discount' => $discount
             ]);
         }
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Authorization' => 'Basic ' . $this->getBasicAuth(),
-                ],
+                'headers' => $this->getDefaultHeaders(),
                 'json' => $payload,
             ]);
 
@@ -633,23 +493,21 @@ class LoyaltyEngageApiService
             $content = $response->getContent(false);
 
             if ($this->getLoggerStatus()) {
-                $this->logger->info('LoyaltyEngage Discount Claim Response:', [
-                    'email' => $email,
+                $this->logger->info('LoyaltyEngage: Discount Claim Response', [
                     'discount' => $discount,
                     'response_code' => $statusCode,
                     'response_body' => $content
                 ]);
             }
 
-            if ($statusCode !== 200) {
+            if ($statusCode !== self::HTTP_OK) {
                 return null;
             }
 
             return json_decode($content, true);
         } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
             if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage Claim Discount Error:', [
-                    'email' => $email,
+                $this->logger->error('LoyaltyEngage: Claim Discount Error', [
                     'discount' => $discount,
                     'error' => $e->getMessage()
                 ]);

@@ -4,6 +4,7 @@ namespace LoyaltyEngage\Controller\Api;
 
 use LoyaltyEngage\Api\LoyaltyCartApiInterface;
 use LoyaltyEngage\Service\LoyaltyCartService;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Storefront\Controller\StorefrontController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -57,6 +58,13 @@ class LoyaltyCartController extends StorefrontController implements LoyaltyCartA
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
+
+        if (empty($productId) || !Uuid::isValid($productId)) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Invalid or missing product ID.'
+            ], Response::HTTP_BAD_REQUEST);
+        }
         
         // Get email from logged-in customer or URL parameter
         $customerEmail = $this->getCustomerEmail($email, $context);
@@ -80,6 +88,13 @@ class LoyaltyCartController extends StorefrontController implements LoyaltyCartA
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
+
+        if (empty($productId) || !Uuid::isValid($productId)) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Invalid or missing product ID.'
+            ], Response::HTTP_BAD_REQUEST);
+        }
         
         $customerEmail = $this->getCustomerEmail($email, $context);
         
@@ -121,7 +136,14 @@ class LoyaltyCartController extends StorefrontController implements LoyaltyCartA
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
-        $discount = (float)($data['discount'] ?? 0.1); // Default to 10% if not specified
+        $discount = (float)($data['discount'] ?? 0.1);
+
+        if (empty($productId) || !Uuid::isValid($productId)) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Invalid or missing product ID.'
+            ], Response::HTTP_BAD_REQUEST);
+        }
         
         $customerEmail = $this->getCustomerEmail($email, $context);
         

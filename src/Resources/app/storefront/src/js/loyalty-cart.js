@@ -16,8 +16,6 @@ export default class LoyaltyCartPlugin extends Plugin {
     };
 
     init() {
-        console.log('[LoyaltyCartPlugin] INIT ✅');
-
         this._httpClient = new HttpClient();
         this._registerEvents();
 
@@ -31,39 +29,30 @@ export default class LoyaltyCartPlugin extends Plugin {
     }
 
     _registerEvents() {
-        console.log('[LoyaltyCartPlugin] _registerEvents() called');
-
         document.$emitter.subscribe(COOKIE_CONFIGURATION_UPDATE, this._onCookieConfigurationUpdate.bind(this));
 
         // Regular add to cart buttons
         const addButtons = DomAccess.querySelectorAll(document, this.options.addToCartButtonSelector, false);
         if (addButtons.length) {
             addButtons.forEach((button) => {
-                console.log('[LoyaltyCartPlugin] Binding click event to add button:', button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onAddToCartButtonClick.bind(this));
             });
-        } else {
-            console.warn('[LoyaltyCartPlugin] No add buttons found');
         }
 
         // Discount claim buttons
         const discountButtons = DomAccess.querySelectorAll(document, this.options.claimDiscountButtonSelector, false);
         if (discountButtons.length) {
             discountButtons.forEach((button) => {
-                console.log('[LoyaltyCartPlugin] Binding click event to discount button:', button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onClaimDiscountButtonClick.bind(this));
             });
-        } else {
-            console.warn('[LoyaltyCartPlugin] No discount buttons found');
         }
 
         // Redeem points buttons
         const redeemButtons = DomAccess.querySelectorAll(document, this.options.redeemPointsButtonSelector, false);
         if (redeemButtons.length) {
             redeemButtons.forEach((button) => {
-                console.log('[LoyaltyCartPlugin] Binding click event to redeem points button:', button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onRedeemPointsButtonClick.bind(this));
             });
@@ -73,7 +62,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         const removeDiscountButtons = DomAccess.querySelectorAll(document, this.options.removePointsDiscountButtonSelector, false);
         if (removeDiscountButtons.length) {
             removeDiscountButtons.forEach((button) => {
-                console.log('[LoyaltyCartPlugin] Binding click event to remove discount button:', button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onRemovePointsDiscountButtonClick.bind(this));
             });
@@ -86,22 +74,17 @@ export default class LoyaltyCartPlugin extends Plugin {
 
     _onAddToCartButtonClick(event) {
         event.preventDefault();
-        console.log('[LoyaltyCartPlugin] Button clicked');
 
         const button = event.currentTarget;
         const productId = DomAccess.getAttribute(button, this.options.productIdAttribute);
-        console.log('[LoyaltyCartPlugin] Product ID:', productId);
 
-        // Check if customer is logged in (Store API will handle auth via session)
         const customerEmail = window.loyaltyCustomerEmail;
 
         if (!customerEmail) {
-            console.warn('[LoyaltyCartPlugin] Customer not logged in, redirecting to login...');
             window.location.href = '/account/login';
             return;
         }
 
-        console.log('[LoyaltyCartPlugin] Customer logged in, adding product...');
         this._addProductToLoyaltyCart(productId, button);
     }
 
@@ -110,7 +93,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         const originalText = button.innerHTML;
         button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
 
-        // Use Store API endpoint - authentication is handled via customer session
         this._httpClient.post(
             '/store-api/loyalty/cart/add',
             JSON.stringify({ productId }),
@@ -133,7 +115,7 @@ export default class LoyaltyCartPlugin extends Plugin {
                 }
             },
             'application/json',
-            true // contentType header
+            true
         );
     }
 
@@ -146,23 +128,18 @@ export default class LoyaltyCartPlugin extends Plugin {
 
     _onClaimDiscountButtonClick(event) {
         event.preventDefault();
-        console.log('[LoyaltyCartPlugin] Discount button clicked');
 
         const button = event.currentTarget;
         const productId = DomAccess.getAttribute(button, this.options.productIdAttribute);
         const discount = parseFloat(DomAccess.getAttribute(button, this.options.discountAttribute) || '0.1');
-        
-        console.log('[LoyaltyCartPlugin] Product ID:', productId, 'Discount:', discount);
 
         const customerEmail = window.loyaltyCustomerEmail;
 
         if (!customerEmail) {
-            console.warn('[LoyaltyCartPlugin] Customer not logged in, redirecting to login...');
             window.location.href = '/account/login';
             return;
         }
 
-        console.log('[LoyaltyCartPlugin] Customer logged in, claiming discount...');
         this._claimDiscountAfterAddToLoyaltyCart(productId, discount, button);
     }
 
@@ -173,7 +150,6 @@ export default class LoyaltyCartPlugin extends Plugin {
             button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
         }
 
-        // Use Store API endpoint - authentication is handled via customer session
         this._httpClient.post(
             '/store-api/loyalty/cart/claim-discount',
             JSON.stringify({ productId, discount }),
@@ -204,19 +180,13 @@ export default class LoyaltyCartPlugin extends Plugin {
 
     // ==================== POINTS REDEMPTION METHODS ====================
 
-    /**
-     * Handle redeem points button click
-     */
     _onRedeemPointsButtonClick(event) {
         event.preventDefault();
-        console.log('[LoyaltyCartPlugin] Redeem points button clicked');
 
         const button = event.currentTarget;
         
-        // Get points from data attribute or from input field
         let points = parseInt(DomAccess.getAttribute(button, this.options.pointsAttribute) || '0', 10);
         
-        // If no points in data attribute, try to get from input field
         if (!points) {
             const inputSelector = button.dataset.pointsInput || this.options.pointsInputSelector;
             const pointsInput = document.querySelector(inputSelector);
@@ -233,18 +203,13 @@ export default class LoyaltyCartPlugin extends Plugin {
         const customerEmail = window.loyaltyCustomerEmail;
 
         if (!customerEmail) {
-            console.warn('[LoyaltyCartPlugin] Customer not logged in, redirecting to login...');
             window.location.href = '/account/login';
             return;
         }
 
-        console.log('[LoyaltyCartPlugin] Redeeming points:', points);
         this._redeemPoints(points, button);
     }
 
-    /**
-     * Redeem loyalty points for discount
-     */
     _redeemPoints(points, button) {
         if (button) {
             button.disabled = true;
@@ -283,18 +248,13 @@ export default class LoyaltyCartPlugin extends Plugin {
         );
     }
 
-    /**
-     * Handle remove points discount button click
-     */
     _onRemovePointsDiscountButtonClick(event) {
         event.preventDefault();
-        console.log('[LoyaltyCartPlugin] Remove points discount button clicked');
 
         const button = event.currentTarget;
         const customerEmail = window.loyaltyCustomerEmail;
 
         if (!customerEmail) {
-            console.warn('[LoyaltyCartPlugin] Customer not logged in, redirecting to login...');
             window.location.href = '/account/login';
             return;
         }
@@ -302,9 +262,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         this._removePointsDiscount(button);
     }
 
-    /**
-     * Remove loyalty points discount from cart
-     */
     _removePointsDiscount(button) {
         if (button) {
             button.disabled = true;
@@ -340,9 +297,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         );
     }
 
-    /**
-     * Get redemption info (available points, limits, etc.)
-     */
     _getRedemptionInfo(callback) {
         this._httpClient.get(
             '/store-api/loyalty/redeem-points/info',
@@ -363,9 +317,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         );
     }
 
-    /**
-     * Preview points redemption (calculate discount without redeeming)
-     */
     _previewRedemption(points, callback) {
         this._httpClient.post(
             '/store-api/loyalty/redeem-points/preview',
@@ -455,10 +406,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         );
     }
 
-    /**
-     * External API: Redeem loyalty points for discount
-     * Usage: window.redeemLoyaltyPoints(10, (success, result) => { ... });
-     */
     _redeemPointsExternal(points, callback) {
         const email = window.loyaltyCustomerEmail;
 
@@ -499,10 +446,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         );
     }
 
-    /**
-     * External API: Remove loyalty points discount from cart
-     * Usage: window.removeLoyaltyPointsDiscount((success, result) => { ... });
-     */
     _removePointsDiscountExternal(callback) {
         const email = window.loyaltyCustomerEmail;
 
@@ -536,10 +479,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         );
     }
 
-    /**
-     * External API: Get redemption info
-     * Usage: window.getLoyaltyRedemptionInfo((result) => { ... });
-     */
     _getRedemptionInfoExternal(callback) {
         const email = window.loyaltyCustomerEmail;
 
@@ -553,10 +492,6 @@ export default class LoyaltyCartPlugin extends Plugin {
         this._getRedemptionInfo(callback);
     }
 
-    /**
-     * External API: Preview points redemption
-     * Usage: window.previewLoyaltyPointsRedemption(10, (result) => { ... });
-     */
     _previewRedemptionExternal(points, callback) {
         const email = window.loyaltyCustomerEmail;
 

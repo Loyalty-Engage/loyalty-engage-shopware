@@ -7,6 +7,7 @@ use Shopware\Core\Checkout\Cart\CartPersister;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Checkout\Cart\Price\Struct\AbsolutePriceDefinition;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
+use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -205,7 +206,7 @@ class PointsRedemptionService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return $this->createErrorResponse('An error occurred while redeeming points: ' . $e->getMessage());
+            return $this->createErrorResponse('An error occurred while redeeming points. Please try again later.');
         }
     }
 
@@ -375,6 +376,7 @@ class PointsRedemptionService
             $criteria = new Criteria();
             $criteria->addFilter(new EqualsFilter('email', $email));
             
+            /** @var CustomerEntity|null $customer */
             $customer = $this->customerRepository->search($criteria, $context)->first();
 
             if (!$customer) {
