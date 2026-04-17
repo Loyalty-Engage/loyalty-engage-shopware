@@ -4,6 +4,7 @@
      data-loyalty-cart="true"
      data-access-key="{{ context.salesChannel.accessKey }}"
      data-context-token="{{ context.token }}"
+     data-points-per-euro="{{ loyaltyData.pointsPerEuro|default(1)|e }}"
      id="loyalty-points-redemption-block">
     
     <div class="card-header bg-primary text-white">
@@ -17,17 +18,26 @@
         {# Customer Points Info #}
         <div class="loyalty-points-info mb-3">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="points-available">
                         <span class="label">{{ "loyaltyEngage.checkout.availablePoints"|trans|sw_sanitize }}:</span>
-                        <span class="value fw-bold text-primary" id="loyalty-available-points">{{ loyaltyData.availableCoins }}</span>
+                        <span class="value fw-bold text-primary" id="loyalty-available-points">{{ loyaltyData.availableCoins|default(0)|e }}</span>
                         <span class="unit">{{ "loyaltyEngage.checkout.points"|trans|sw_sanitize }}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                {% if loyaltyData.reservedCoins is defined and loyaltyData.reservedCoins > 0 %}
+                <div class="col-md-4">
+                    <div class="points-reserved">
+                        <span class="label">{{ "loyaltyEngage.checkout.reservedCoins"|trans|sw_sanitize }}:</span>
+                        <span class="value fw-bold text-warning" id="loyalty-reserved-coins">{{ loyaltyData.reservedCoins|e }}</span>
+                        <span class="unit">{{ "loyaltyEngage.checkout.points"|trans|sw_sanitize }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="col-md-4">
                     <div class="points-conversion">
                         <span class="label">{{ "loyaltyEngage.checkout.conversionRate"|trans|sw_sanitize }}:</span>
-                        <span class="value">{{ loyaltyData.pointsPerEuro }} {{ "loyaltyEngage.checkout.point"|trans|sw_sanitize }} = €1</span>
+                        <span class="value">{{ loyaltyData.pointsPerEuro|default(1)|e }} {{ "loyaltyEngage.checkout.point"|trans|sw_sanitize }} = €1</span>
                     </div>
                 </div>
             </div>
@@ -36,7 +46,7 @@
             <div class="tier-info mt-2">
                 <small class="text-muted">
                     {{ "loyaltyEngage.checkout.yourTier"|trans|sw_sanitize }}: 
-                    <span class="badge bg-secondary">{{ loyaltyData.currentTier }}</span>
+                    <span class="badge bg-secondary">{{ loyaltyData.currentTier|e }}</span>
                 </small>
             </div>
             {% endif %}
@@ -235,7 +245,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const quickSelectButtons = document.querySelectorAll('.loyalty-quick-select');
     const redeemBtn = document.getElementById('loyalty-redeem-btn');
     const removeBtn = document.getElementById('loyalty-remove-discount-btn');
-    const pointsPerEuro = {{ loyaltyData.pointsPerEuro }};
+    const loyaltyBlockEl = document.getElementById('loyalty-points-redemption-block');
+    const pointsPerEuro = parseInt(loyaltyBlockEl ? loyaltyBlockEl.dataset.pointsPerEuro : '1') || 1;
 
     // Update preview when input changes
     if (pointsInput && previewAmount) {

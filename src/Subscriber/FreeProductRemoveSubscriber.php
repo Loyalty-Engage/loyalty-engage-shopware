@@ -47,7 +47,8 @@ class FreeProductRemoveSubscriber implements EventSubscriberInterface
             }
             
             // Check if the product is free (price is 0)
-            if ((float)$lineItem->getPrice()->getUnitPrice() !== 0.0) {
+            $price = $lineItem->getPrice();
+            if ($price === null || (float)$price->getUnitPrice() !== 0.0) {
                 return;
             }
             

@@ -7,11 +7,7 @@ use Shopware\Core\Framework\Context;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
 
-/**
- * @Route(defaults={"_routeScope"={"api"}})
- */
 class CustomerLoyaltyController extends AbstractController
 {
     /**
@@ -29,8 +25,7 @@ class CustomerLoyaltyController extends AbstractController
 
     /**
      * Update customer loyalty data by email
-     * 
-     * @Route("/api/_action/loyalty-engage/customer/update", name="api.action.loyalty_engage.customer.update", methods={"POST"})
+     * Route defined in routes.xml: POST /api/_action/loyalty-engage/customer/update
      */
     public function updateCustomerLoyalty(Request $request, Context $context): JsonResponse
     {
@@ -59,8 +54,7 @@ class CustomerLoyaltyController extends AbstractController
 
     /**
      * Get customer loyalty data by email
-     * 
-     * @Route("/api/_action/loyalty-engage/customer/get", name="api.action.loyalty_engage.customer.get", methods={"POST"})
+     * Route defined in routes.xml: POST /api/_action/loyalty-engage/customer/get
      */
     public function getCustomerLoyalty(Request $request, Context $context): JsonResponse
     {

@@ -91,6 +91,10 @@ class CustomerLoyaltyService
                 $customFields['le_points_to_next_tier'] = (int) $loyaltyData['le_points_to_next_tier'];
             }
 
+            if (isset($loyaltyData['le_reserved_coins'])) {
+                $customFields['le_reserved_coins'] = (int) $loyaltyData['le_reserved_coins'];
+            }
+
             // Update customer
             $this->customerRepository->update([
                 [
@@ -167,6 +171,7 @@ class CustomerLoyaltyService
                     'le_available_coins' => $customFields['le_available_coins'] ?? 0,
                     'le_next_tier' => $customFields['le_next_tier'] ?? null,
                     'le_points_to_next_tier' => $customFields['le_points_to_next_tier'] ?? 0,
+                    'le_reserved_coins' => $customFields['le_reserved_coins'] ?? 0,
                 ]
             ];
 

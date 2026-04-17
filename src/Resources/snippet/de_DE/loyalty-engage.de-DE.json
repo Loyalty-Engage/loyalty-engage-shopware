@@ -23,6 +23,7 @@
         "checkout": {
             "title": "Lösen Sie Ihre Treuepunkte ein",
             "availablePoints": "Verfügbar",
+            "reservedCoins": "Reserviert",
             "points": "Punkte",
             "point": "Punkt",
             "conversionRate": "Umrechnungskurs",

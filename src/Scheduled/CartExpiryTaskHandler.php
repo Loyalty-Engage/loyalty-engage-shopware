@@ -3,14 +3,14 @@
 namespace LoyaltyEngage\Scheduled;
 
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
-use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
+use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\NotFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\RangeFilter;
 use Shopware\Core\Framework\MessageQueue\ScheduledTask\ScheduledTaskHandler;
-use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Psr\Log\LoggerInterface;
 
 class CartExpiryTaskHandler extends ScheduledTaskHandler
@@ -75,27 +75,30 @@ class CartExpiryTaskHandler extends ScheduledTaskHandler
         $criteria->addFilter(new RangeFilter('createdAt', [
             RangeFilter::LTE => $fromDate,
         ]));
-        $criteria->addFilter(new EqualsFilter('customerId', null, 'neq'));
+        $criteria->addFilter(new NotFilter(NotFilter::CONNECTION_AND, [
+            new EqualsFilter('customerId', null),
+        ]));
         $criteria->addFilter(new EqualsFilter('active', true));
         $criteria->addAssociation('customer');
 
         $carts = $this->orderRepository->search($criteria, $context);
 
         if ($carts->getTotal() > 0) {
-            foreach ($carts->getEntities() as $cart) {
+            foreach ($carts->getEntities() as $order) {
+                /** @var OrderEntity $order */
                 try {
-                    $customer = $cart->getCustomer();
-                    if (!$customer) {
+                    $orderCustomer = $order->getOrderCustomer();
+                    if (!$orderCustomer) {
                         if ($loggerStatus) {
-                            $this->logger->error('Customer not found for cart', ['cartId' => $cart->getId()]);
+                            $this->logger->error('Customer not found for order', ['orderId' => $order->getId()]);
                         }
                         continue;
                     }
 
-                    $email = $customer->getEmail();
+                    $email = $orderCustomer->getEmail();
                     if (!$email) {
                         if ($loggerStatus) {
-                            $this->logger->error('Email not found for customer', ['customerId' => $customer->getId()]);
+                            $this->logger->error('Email not found for order customer', ['orderId' => $order->getId()]);
                         }
                         continue;
                     }
@@ -112,20 +115,22 @@ class CartExpiryTaskHandler extends ScheduledTaskHandler
                         continue;
                     }
 
-                    // Mark cart as inactive
+                    // Mark order loyalty cart as processed via custom field
+                    $customFields = $order->getCustomFields() ?? [];
+                    $customFields['loyalty_cart_expired'] = true;
                     $this->orderRepository->update([
                         [
-                            'id' => $cart->getId(),
-                            'active' => false,
+                            'id' => $order->getId(),
+                            'customFields' => $customFields,
                         ]
                     ], $context);
 
                     if ($loggerStatus) {
-                        $this->logger->info('Cart ID ' . $cart->getId() . ' processed successfully.');
+                        $this->logger->info('Order ID ' . $order->getId() . ' loyalty cart expired and processed successfully.');
                     }
                 } catch (\Exception $e) {
                     if ($loggerStatus) {
-                        $this->logger->error('Error processing cart ID ' . $cart->getId() . ': ' . $e->getMessage(), [
+                        $this->logger->error('Error processing order ID ' . $order->getId() . ': ' . $e->getMessage(), [
                             'exception' => $e
                         ]);
                     }

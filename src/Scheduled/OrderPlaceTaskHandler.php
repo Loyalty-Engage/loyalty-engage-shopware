@@ -75,7 +75,15 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
 
         foreach ($orders->getEntities() as $order) {
             /** @var OrderEntity $order */
-            $email = $order->getOrderCustomer()->getEmail();
+            $orderCustomer = $order->getOrderCustomer();
+            if (!$orderCustomer || !$orderCustomer->getEmail()) {
+                $this->logger->warning('LoyaltyEngage: Skipping order without customer/email in OrderPlaceTaskHandler', [
+                    'orderId' => $order->getId()
+                ]);
+                continue;
+            }
+
+            $email = $orderCustomer->getEmail();
             $orderNumber = $order->getOrderNumber();
 
             // Prepare order data

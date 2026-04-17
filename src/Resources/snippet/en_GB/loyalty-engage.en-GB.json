@@ -23,6 +23,7 @@
         "checkout": {
             "title": "Redeem your loyalty points",
             "availablePoints": "Available",
+            "reservedCoins": "Reserved",
             "points": "points",
             "point": "point",
             "conversionRate": "Conversion rate",

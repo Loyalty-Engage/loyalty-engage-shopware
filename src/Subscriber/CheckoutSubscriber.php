@@ -4,6 +4,7 @@ namespace LoyaltyEngage\Subscriber;
 
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Shopware\Core\Checkout\Cart\Cart;
+use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
@@ -87,6 +88,7 @@ class CheckoutSubscriber implements EventSubscriberInterface
         try {
             // Get customer loyalty data
             $criteria = new Criteria([$customer->getId()]);
+            /** @var CustomerEntity|null $customerEntity */
             $customerEntity = $this->customerRepository->search($criteria, $context->getContext())->first();
 
             if (!$customerEntity) {
@@ -95,6 +97,7 @@ class CheckoutSubscriber implements EventSubscriberInterface
 
             $customFields = $customerEntity->getCustomFields() ?? [];
             $availableCoins = (int) ($customFields['le_available_coins'] ?? 0);
+            $reservedCoins = (int) ($customFields['le_reserved_coins'] ?? 0);
             $currentTier = $customFields['le_current_tier'] ?? null;
             $totalPoints = (int) ($customFields['le_points'] ?? 0);
 
@@ -139,6 +142,7 @@ class CheckoutSubscriber implements EventSubscriberInterface
                 'cartTotal' => $cartTotal,
                 'maxRedeemablePoints' => $maxRedeemable,
                 'maxDiscountAmount' => $maxRedeemable / $pointsPerEuro,
+                'reservedCoins' => $reservedCoins,
                 'existingDiscount' => $existingDiscount,
                 'canRedeem' => $availableCoins >= $minPoints && $maxRedeemable > 0,
             ];

@@ -118,8 +118,8 @@ class LoyaltyCartService
                 return $this->createErrorResponse('Invalid or unavailable product.');
             }
 
-            // Create line item for the product
-            $lineItem = new LineItem($productId, LineItem::PRODUCT_LINE_ITEM_TYPE, $productId, 1);
+            // Create line item for the product (use random UUID to avoid duplicate key issues)
+            $lineItem = new LineItem(\Shopware\Core\Framework\Uuid\Uuid::randomHex(), LineItem::PRODUCT_LINE_ITEM_TYPE, $productId, 1);
             $lineItem->setStackable(true);
             $lineItem->setRemovable(true);
 
@@ -145,7 +145,7 @@ class LoyaltyCartService
                 'exception' => $e
             ]);
 
-            return $this->createErrorResponse($e->getMessage());
+            return $this->createErrorResponse('An error occurred while adding the product to the cart.');
         }
     }
 
@@ -186,7 +186,7 @@ class LoyaltyCartService
                 'exception' => $e
             ]);
 
-            return $this->createErrorResponse($e->getMessage());
+            return $this->createErrorResponse('An error occurred while removing the product from the cart.');
         }
     }
 
@@ -223,7 +223,7 @@ class LoyaltyCartService
                 'exception' => $e
             ]);
 
-            return $this->createErrorResponse($e->getMessage());
+            return $this->createErrorResponse('An error occurred while removing all products from the cart.');
         }
     }
 
@@ -275,7 +275,7 @@ class LoyaltyCartService
                 'exception' => $e
             ]);
 
-            return $this->createErrorResponse($e->getMessage());
+            return $this->createErrorResponse('An error occurred while claiming the discount.');
         }
     }
 

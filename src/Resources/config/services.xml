@@ -155,7 +155,6 @@
             <argument type="service" id="order.repository" />
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
             <argument type="service" id="logger" />
-            <tag name="messenger.message_handler" />
         </service>
 
         <service id="LoyaltyEngage\Scheduled\OrderPlaceTask">
@@ -167,7 +166,6 @@
             <argument type="service" id="order.repository" />
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
             <argument type="service" id="logger" />
-            <tag name="messenger.message_handler" />
         </service>
     </services>
 </container>

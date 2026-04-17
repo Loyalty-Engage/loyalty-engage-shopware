@@ -37,6 +37,9 @@ class LoyaltyEngage extends Plugin
     {
         parent::update($updateContext);
 
+        // Add le_reserved_coins field if it doesn't exist yet (migration for existing installs)
+        $this->addReservedCoinsFieldIfMissing($updateContext->getContext());
+
         // Update custom field labels on plugin update
         $this->updateCustomFieldLabels($updateContext->getContext());
         $this->updateCustomFieldSetLabels($updateContext->getContext());
@@ -67,6 +70,51 @@ class LoyaltyEngage extends Plugin
 
         // Remove custom fields if not keeping user data
         $this->removeCustomFields($uninstallContext);
+    }
+
+    /**
+     * Add le_reserved_coins field to existing customer custom field set if missing (migration)
+     */
+    private function addReservedCoinsFieldIfMissing($context): void
+    {
+        $customFieldRepository = $this->container->get('custom_field.repository');
+        $customFieldSetRepository = $this->container->get('custom_field_set.repository');
+
+        // Check if le_reserved_coins already exists
+        $criteria = new Criteria();
+        $criteria->addFilter(new EqualsFilter('name', 'le_reserved_coins'));
+        $existing = $customFieldRepository->search($criteria, $context);
+
+        if ($existing->count() > 0) {
+            return; // Already exists, nothing to do
+        }
+
+        // Find the customer custom field set
+        $setCriteria = new Criteria();
+        $setCriteria->addFilter(new EqualsFilter('name', 'loyalty_engage_customer_fields'));
+        $customFieldSets = $customFieldSetRepository->search($setCriteria, $context);
+
+        if ($customFieldSets->count() === 0) {
+            return; // Set doesn't exist yet, will be created on install
+        }
+
+        $customFieldSet = $customFieldSets->first();
+
+        // Add the le_reserved_coins field to the existing set
+        $customFieldRepository->create([
+            [
+                'name' => 'le_reserved_coins',
+                'type' => 'int',
+                'customFieldSetId' => $customFieldSet->getId(),
+                'config' => [
+                    'label' => [
+                        'en-GB' => 'Reserved Coins',
+                        'de-DE' => 'Reservierte Münzen',
+                    ],
+                    'customFieldPosition' => 6,
+                ],
+            ],
+        ], $context);
     }
 
     /**
@@ -224,6 +272,17 @@ class LoyaltyEngage extends Plugin
                             'customFieldPosition' => 5,
                         ],
                     ],
+                    [
+                        'name' => 'le_reserved_coins',
+                        'type' => 'int',
+                        'config' => [
+                            'label' => [
+                                'en-GB' => 'Reserved Coins',
+                                'de-DE' => 'Reservierte Münzen',
+                            ],
+                            'customFieldPosition' => 6,
+                        ],
+                    ],
                 ],
             ],
         ], $installContext->getContext());
@@ -257,6 +316,10 @@ class LoyaltyEngage extends Plugin
             'le_points_to_next_tier' => [
                 'en-GB' => 'Points to Next Tier',
                 'de-DE' => 'Punkte bis zur nächsten Stufe',
+            ],
+            'le_reserved_coins' => [
+                'en-GB' => 'Reserved Coins',
+                'de-DE' => 'Reservierte Münzen',
             ],
             'loyalty_order_place' => [
                 'en-GB' => 'Loyalty Order Placed',
