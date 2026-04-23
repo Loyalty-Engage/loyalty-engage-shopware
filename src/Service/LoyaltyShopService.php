@@ -23,8 +23,8 @@ use Psr\Log\LoggerInterface;
  *                                 verify eligibility via LoyaltyEngage API, add to cart at €0.
  *
  *  2. claimDiscountCodeProduct() – discount-code product: call the LoyaltyEngage
- *                                  buy_discount_code endpoint and return the resulting
- *                                  discount code to the browser so the customer can use it.
+ *                                  buy_discount_code endpoint, create a Shopware promotion
+ *                                  with the returned code, apply it to the cart.
  */
 class LoyaltyShopService
 {
@@ -33,6 +33,7 @@ class LoyaltyShopService
     private CartService $cartService;
     private CartPersister $cartPersister;
     private EntityRepository $productRepository;
+    private EntityRepository $promotionRepository;
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private LoggerInterface $logger;
 
@@ -40,12 +41,14 @@ class LoyaltyShopService
         CartService $cartService,
         CartPersister $cartPersister,
         EntityRepository $productRepository,
+        EntityRepository $promotionRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {
         $this->cartService             = $cartService;
         $this->cartPersister           = $cartPersister;
         $this->productRepository       = $productRepository;
+        $this->promotionRepository     = $promotionRepository;
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->logger                  = $logger;
     }
@@ -114,11 +117,12 @@ class LoyaltyShopService
      *
      * Flow:
      *  1. Call LoyaltyEngage buy_discount_code endpoint with the SKU.
-     *  2. Return the discount code(s) to the browser.
+     *  2. Create a Shopware promotion with the returned discount code.
+     *  3. Apply the promotion code to the customer's cart.
+     *  4. Return success with the discount code.
      *
-     * The $discount parameter is passed through from the widget but is not used
-     * by the buy_discount_code endpoint – the discount value is determined server-
-     * side by LoyaltyEngage based on the SKU.
+     * The $discount parameter contains the discount percentage (e.g. 15 for 15%).
+     * If not provided or 0, we try to extract it from the API response.
      */
     public function claimDiscountCodeProduct(
         string $email,
@@ -136,22 +140,64 @@ class LoyaltyShopService
             // Extract discount code from the API response
             $discountCode = $result['discountCode'] ?? $result['code'] ?? null;
 
-            if ($discountCode) {
+            if (!$discountCode) {
+                // API returned success but no code – still return success
                 return array_merge(
-                    $this->success("Discount code claimed successfully: {$discountCode}"),
+                    $this->success('Discount code claimed successfully.'),
+                    ['apiResponse' => $result]
+                );
+            }
+
+            // Extract discount percentage from API response or use passed value
+            // API may return: discountPercentage, percentage, discount_percentage, value
+            $discountPercentage = (float) (
+                $result['discountPercentage']
+                ?? $result['percentage']
+                ?? $result['discount_percentage']
+                ?? $result['value']
+                ?? $discount
+                ?? 0
+            );
+
+            // Create the Shopware promotion with this code
+            $promotionCreated = $this->createShopwarePromotion(
+                $discountCode,
+                $discountPercentage,
+                $context
+            );
+
+            if (!$promotionCreated) {
+                $this->logger->warning('LoyaltyShopService: Could not create Shopware promotion, returning code only', [
+                    'discountCode' => $discountCode,
+                ]);
+                // Still return the code so the customer can use it manually
+                return array_merge(
+                    $this->success("Kortingscode: {$discountCode}"),
                     ['discountCode' => $discountCode, 'apiResponse' => $result]
                 );
             }
 
-            // API returned success but no code in the expected fields – still a success
+            // Apply the promotion code to the cart
+            $applied = $this->applyPromotionToCart($discountCode, $context);
+
+            if ($applied) {
+                return array_merge(
+                    $this->success("Kortingscode '{$discountCode}' is toegepast op uw winkelwagen!"),
+                    ['discountCode' => $discountCode, 'apiResponse' => $result]
+                );
+            }
+
+            // Promotion created but could not be applied to cart (cart may be empty)
             return array_merge(
-                $this->success('Discount code claimed successfully.'),
-                ['apiResponse' => $result]
+                $this->success("Kortingscode aangemaakt: {$discountCode}. Voeg producten toe aan uw winkelwagen en gebruik de code bij het afrekenen."),
+                ['discountCode' => $discountCode, 'apiResponse' => $result]
             );
+
         } catch (\Throwable $e) {
             $this->logger->error('LoyaltyShopService: claimDiscountCodeProduct failed', [
                 'sku'   => $sku,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return $this->error('An error occurred while claiming the discount code.');
@@ -159,8 +205,128 @@ class LoyaltyShopService
     }
 
     // -------------------------------------------------------------------------
-    // Helpers
+    // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Create a Shopware promotion with the given discount code.
+     *
+     * Uses a global code (not individual codes) so the code can be applied
+     * directly to the cart. The promotion is:
+     *  - Active immediately
+     *  - Valid for 1 year
+     *  - Max 1 redemption per customer
+     *  - Percentage discount on the cart total
+     *  - Available in all sales channels
+     */
+    private function createShopwarePromotion(
+        string $code,
+        float $discountPercentage,
+        SalesChannelContext $context
+    ): bool {
+        try {
+            $promotionId = Uuid::randomHex();
+            $discountId  = Uuid::randomHex();
+
+            // Use at least 1% if no percentage provided (fallback)
+            if ($discountPercentage <= 0) {
+                $discountPercentage = 1.0;
+            }
+
+            $salesChannelId = $context->getSalesChannelId();
+
+            $promotionData = [
+                'id'                     => $promotionId,
+                'name'                   => 'LoyaltyEngage: ' . $code,
+                'active'                 => true,
+                'validFrom'              => null,
+                'validUntil'             => (new \DateTime('+1 year'))->format(\DateTime::ATOM),
+                'maxRedemptionsGlobal'   => 1,
+                'maxRedemptionsPerCustomer' => 1,
+                'priority'               => 1,
+                'exclusive'              => false,
+                'useCodes'               => true,
+                'useIndividualCodes'     => false,
+                'useSetGroups'           => false,
+                'customerRestriction'    => false,
+                'preventCombination'     => false,
+                'code'                   => $code,
+                'translations'           => [
+                    ['languageId' => $context->getContext()->getLanguageId(), 'name' => 'LoyaltyEngage: ' . $code],
+                ],
+                'salesChannels'          => [
+                    ['salesChannelId' => $salesChannelId, 'priority' => 1],
+                ],
+                'discounts'              => [
+                    [
+                        'id'                => $discountId,
+                        'scope'             => 'cart',
+                        'type'              => 'percentage',
+                        'value'             => $discountPercentage,
+                        'considerAdvancedRules' => false,
+                        'sorterKey'         => 'PRICE_ASC',
+                        'applierKey'        => 'ALL',
+                        'usageKey'          => 'ALL',
+                    ],
+                ],
+            ];
+
+            $this->promotionRepository->create([$promotionData], $context->getContext());
+
+            $this->logger->info('LoyaltyShopService: Shopware promotion created', [
+                'promotionId'        => $promotionId,
+                'code'               => $code,
+                'discountPercentage' => $discountPercentage,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->error('LoyaltyShopService: Failed to create Shopware promotion', [
+                'code'  => $code,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Apply a promotion code to the customer's cart.
+     */
+    private function applyPromotionToCart(string $code, SalesChannelContext $context): bool
+    {
+        try {
+            $cart = $this->cartService->getCart($context->getToken(), $context);
+
+            // Check if cart has items (promotion can only be applied to non-empty cart)
+            if ($cart->getLineItems()->count() === 0) {
+                return false;
+            }
+
+            // Add promotion line item to cart
+            $promotionLineItem = new LineItem(
+                Uuid::randomHex(),
+                LineItem::PROMOTION_LINE_ITEM_TYPE,
+                null,
+                1
+            );
+            $promotionLineItem->setReferencedId($code);
+            $promotionLineItem->setLabel($code);
+            $promotionLineItem->setRemovable(true);
+            $promotionLineItem->setStackable(false);
+
+            $cart->add($promotionLineItem);
+            $this->cartService->recalculate($cart, $context);
+            $this->cartPersister->save($cart, $context);
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->warning('LoyaltyShopService: Could not apply promotion to cart', [
+                'code'  => $code,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
 
     /**
      * Look up a Shopware product UUID by its productNumber (= SKU).

@@ -27,6 +27,7 @@
             <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
             <argument type="service" id="Shopware\Core\Checkout\Cart\CartPersister"/>
             <argument type="service" id="product.repository"/>
+            <argument type="service" id="promotion.repository"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
         </service>
