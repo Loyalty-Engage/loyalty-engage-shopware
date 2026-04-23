@@ -5,7 +5,7 @@
         https://symfony.com/schema/routing/routing-1.0.xsd">
 
     <!-- Storefront routes – loaded from PHP #[Route] attributes on the controller -->
-    <import resource="../../Controller/Storefront/**/*Controller.php" type="annotation" />
+    <import resource="../../Controller/Storefront/**/*Controller.php" type="attribute" />
 
     <!-- Store API routes for frontend (customer session auth) -->
     <route id="store-api.loyalty.cart.add" path="/store-api/loyalty/cart/add" methods="POST">
