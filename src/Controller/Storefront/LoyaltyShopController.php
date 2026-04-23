@@ -8,21 +8,14 @@ use Shopware\Storefront\Controller\StorefrontController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
 
 /**
  * Storefront controller for the Loyalty Shop widget.
  *
- * These endpoints are called by the embedded HTML/JS widget that is injected
- * via the LoyaltyEngage email / CMS block. The widget uses plain fetch() calls
- * with the customer's browser session cookie, so we use the storefront scope
- * (no bearer token required).
- *
- * Routes:
+ * Routes are defined in Resources/config/routes.xml:
  *   POST /loyaltyshop/cart/add        – add a physical loyalty product by SKU
  *   POST /loyaltyshop/discount/claim  – claim a discount-code product by SKU
  */
-#[Route(defaults: ['_routeScope' => ['storefront']])]
 class LoyaltyShopController extends StorefrontController
 {
     private LoyaltyShopService $loyaltyShopService;
@@ -35,20 +28,10 @@ class LoyaltyShopController extends StorefrontController
     /**
      * Add a physical loyalty product to the Shopware cart.
      *
-     * Request body (JSON):
-     * {
-     *   "sku": "24-MB01"
-     * }
+     * Request body (JSON): { "sku": "24-MB01" }
      */
-    #[Route(
-        path: '/loyaltyshop/cart/add',
-        name: 'frontend.loyaltyshop.cart.add',
-        methods: ['POST'],
-        defaults: ['_routeScope' => ['storefront'], 'XmlHttpRequest' => true, 'csrf_protected' => false]
-    )]
     public function addToCart(Request $request, SalesChannelContext $context): JsonResponse
     {
-        // Must be logged in
         if (!$context->getCustomer()) {
             return new JsonResponse(
                 ['success' => false, 'message' => 'User not logged in'],
@@ -78,21 +61,10 @@ class LoyaltyShopController extends StorefrontController
     /**
      * Claim a discount-code product from the loyalty shop.
      *
-     * Request body (JSON):
-     * {
-     *   "sku":      "DISCOUNT_PER_10",
-     *   "discount": 1050
-     * }
+     * Request body (JSON): { "sku": "DISCOUNT_PER_10", "discount": 1050 }
      */
-    #[Route(
-        path: '/loyaltyshop/discount/claim',
-        name: 'frontend.loyaltyshop.discount.claim',
-        methods: ['POST'],
-        defaults: ['_routeScope' => ['storefront'], 'XmlHttpRequest' => true, 'csrf_protected' => false]
-    )]
     public function claimDiscount(Request $request, SalesChannelContext $context): JsonResponse
     {
-        // Must be logged in
         if (!$context->getCustomer()) {
             return new JsonResponse(
                 ['success' => false, 'message' => 'User not logged in'],

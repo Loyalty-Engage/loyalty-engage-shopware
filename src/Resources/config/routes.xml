@@ -4,8 +4,18 @@
         xsi:schemaLocation="http://symfony.com/schema/routing
         https://symfony.com/schema/routing/routing-1.0.xsd">
 
-    <!-- Storefront routes – loaded from PHP #[Route] attributes on the controller -->
-    <import resource="../../Controller/Storefront/**/*Controller.php" type="attribute" />
+    <!-- Storefront routes for the embedded Loyalty Shop widget -->
+    <route id="frontend.loyaltyshop.cart.add" path="/loyaltyshop/cart/add" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyShopController::addToCart</default>
+        <default key="_routeScope">storefront</default>
+        <default key="csrf_protected">false</default>
+    </route>
+
+    <route id="frontend.loyaltyshop.discount.claim" path="/loyaltyshop/discount/claim" methods="POST">
+        <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyShopController::claimDiscount</default>
+        <default key="_routeScope">storefront</default>
+        <default key="csrf_protected">false</default>
+    </route>
 
     <!-- Store API routes for frontend (customer session auth) -->
     <route id="store-api.loyalty.cart.add" path="/store-api/loyalty/cart/add" methods="POST">
