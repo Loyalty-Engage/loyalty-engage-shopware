@@ -7,13 +7,21 @@
     <!-- Storefront routes for the embedded Loyalty Shop widget -->
     <route id="frontend.loyaltyshop.cart.add" path="/loyaltyshop/cart/add" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyShopController::addToCart</default>
-        <default key="_routeScope">storefront</default>
+        <default key="_routeScope">
+            <list>
+                <string>storefront</string>
+            </list>
+        </default>
         <default key="csrf_protected">false</default>
     </route>
 
     <route id="frontend.loyaltyshop.discount.claim" path="/loyaltyshop/discount/claim" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyShopController::claimDiscount</default>
-        <default key="_routeScope">storefront</default>
+        <default key="_routeScope">
+            <list>
+                <string>storefront</string>
+            </list>
+        </default>
         <default key="csrf_protected">false</default>
     </route>
 
