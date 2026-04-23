@@ -44,7 +44,7 @@ class LoyaltyShopController extends StorefrontController
         path: '/loyaltyshop/cart/add',
         name: 'frontend.loyaltyshop.cart.add',
         methods: ['POST'],
-        defaults: ['XmlHttpRequest' => true]
+        defaults: ['_routeScope' => ['storefront'], 'XmlHttpRequest' => true, 'csrf_protected' => false]
     )]
     public function addToCart(Request $request, SalesChannelContext $context): JsonResponse
     {
@@ -88,7 +88,7 @@ class LoyaltyShopController extends StorefrontController
         path: '/loyaltyshop/discount/claim',
         name: 'frontend.loyaltyshop.discount.claim',
         methods: ['POST'],
-        defaults: ['XmlHttpRequest' => true]
+        defaults: ['_routeScope' => ['storefront'], 'XmlHttpRequest' => true, 'csrf_protected' => false]
     )]
     public function claimDiscount(Request $request, SalesChannelContext $context): JsonResponse
     {
