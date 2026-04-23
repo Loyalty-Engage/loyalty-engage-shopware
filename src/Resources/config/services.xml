@@ -22,6 +22,24 @@
             <argument type="service" id="logger"/>
         </service>
 
+        <!-- Loyalty Shop Service (storefront widget) -->
+        <service id="LoyaltyEngage\Service\LoyaltyShopService">
+            <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\CartPersister"/>
+            <argument type="service" id="product.repository"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+        </service>
+
+        <!-- Storefront Controller (loyalty shop widget endpoints) -->
+        <service id="LoyaltyEngage\Controller\Storefront\LoyaltyShopController" public="true">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopService"/>
+            <call method="setContainer">
+                <argument type="service" id="service_container"/>
+            </call>
+            <tag name="controller.service_arguments"/>
+        </service>
+
         <!-- API Controllers -->
         <service id="LoyaltyEngage\Controller\Api\LoyaltyCartController" public="true">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyCartService"/>
