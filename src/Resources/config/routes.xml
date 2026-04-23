@@ -12,6 +12,7 @@
                 <string>storefront</string>
             </list>
         </default>
+        <default key="XmlHttpRequest">true</default>
         <default key="csrf_protected">false</default>
     </route>
 
@@ -22,6 +23,7 @@
                 <string>storefront</string>
             </list>
         </default>
+        <default key="XmlHttpRequest">true</default>
         <default key="csrf_protected">false</default>
     </route>
 
