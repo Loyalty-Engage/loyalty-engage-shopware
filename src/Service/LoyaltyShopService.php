@@ -95,6 +95,9 @@ class LoyaltyShopService
             $lineItem->setPriceDefinition(
                 new QuantityPriceDefinition(0, $context->buildTaxRules($product->getTaxId()), 1)
             );
+            // Mark as loyalty free product so LoyaltyFreeProductProcessor forces price to €0
+            // after Shopware's standard product processor runs
+            $lineItem->setPayloadValue('loyaltyFreeProduct', true);
 
             $cart = $this->cartService->getCart($context->getToken(), $context);
             $cart->add($lineItem);

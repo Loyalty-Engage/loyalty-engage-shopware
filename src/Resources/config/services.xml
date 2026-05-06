@@ -77,6 +77,14 @@
             <tag name="shopware.cart.processor" priority="-5000"/>
         </service>
 
+        <!-- Loyalty Free Product Processor: forces loyalty product prices to €0.
+             Must run AFTER Shopware's default product processor (priority 5000),
+             so we use a lower priority number (-100) to ensure correct ordering. -->
+        <service id="LoyaltyEngage\Cart\LoyaltyFreeProductProcessor">
+            <argument type="service" id="Shopware\Core\Checkout\Cart\Price\QuantityPriceCalculator"/>
+            <tag name="shopware.cart.processor" priority="-100"/>
+        </service>
+
         <!-- Points Redemption Controller -->
         <service id="LoyaltyEngage\Controller\Api\PointsRedemptionController" public="true">
             <argument type="service" id="LoyaltyEngage\Service\PointsRedemptionService"/>

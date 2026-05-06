@@ -96,14 +96,8 @@ class LoyaltyCartService
             return $this->createErrorResponse('Email and Product ID are required.');
         }
 
-        // Check with loyalty API if the customer is eligible
-        $apiResponse = $this->loyaltyEngageApiService->addToCart($email, $productId);
-        if ($apiResponse !== self::HTTP_OK) {
-            return $this->createErrorResponse('Product could not be added. User is not eligible.');
-        }
-
         try {
-            // Get product details
+            // Get product details FIRST so we can pass the correct SKU (productNumber) to the API
             $criteria = new Criteria([$productId]);
             $criteria->addAssociation('cover');
             $criteria->addAssociation('options.group');
@@ -118,12 +112,22 @@ class LoyaltyCartService
                 return $this->createErrorResponse('Invalid or unavailable product.');
             }
 
+            // Resolve the SKU (productNumber) to pass to the LoyaltyEngage API
+            $sku = $product->getProductNumber();
+
+            // Check with loyalty API BEFORE adding to cart — if the customer does not have
+            // enough points the product must NOT be added to the Shopware cart.
+            $apiResponse = $this->loyaltyEngageApiService->addToCart($email, $sku);
+            if ($apiResponse !== self::HTTP_OK) {
+                return $this->createErrorResponse('Product could not be added. User is not eligible.');
+            }
+
             // Create line item for the product (use random UUID to avoid duplicate key issues)
             $lineItem = new LineItem(\Shopware\Core\Framework\Uuid\Uuid::randomHex(), LineItem::PRODUCT_LINE_ITEM_TYPE, $productId, 1);
             $lineItem->setStackable(true);
             $lineItem->setRemovable(true);
 
-            // Set price to 0
+            // Set price to 0 as initial definition
             $lineItem->setPriceDefinition(
                 new \Shopware\Core\Checkout\Cart\Price\Struct\QuantityPriceDefinition(
                     0,
@@ -131,6 +135,10 @@ class LoyaltyCartService
                     1
                 )
             );
+
+            // Mark as loyalty free product so LoyaltyFreeProductProcessor forces price to €0
+            // after Shopware's standard product processor runs
+            $lineItem->setPayloadValue('loyaltyFreeProduct', true);
 
             // Add to cart
             $cart = $this->cartService->getCart($context->getToken(), $context);
