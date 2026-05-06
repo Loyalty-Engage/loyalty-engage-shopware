@@ -124,7 +124,7 @@ class LoyaltyCartService
 
             // Create line item for the product (use random UUID to avoid duplicate key issues)
             $lineItem = new LineItem(\Shopware\Core\Framework\Uuid\Uuid::randomHex(), LineItem::PRODUCT_LINE_ITEM_TYPE, $productId, 1);
-            $lineItem->setStackable(true);
+            $lineItem->setStackable(false); // Quantity cannot be changed by the customer
             $lineItem->setRemovable(true);
 
             // Set price to 0 as initial definition

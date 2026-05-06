@@ -90,7 +90,7 @@ class LoyaltyShopService
             }
 
             $lineItem = new LineItem(Uuid::randomHex(), LineItem::PRODUCT_LINE_ITEM_TYPE, $productId, 1);
-            $lineItem->setStackable(true);
+            $lineItem->setStackable(false); // Quantity cannot be changed by the customer
             $lineItem->setRemovable(true);
             $lineItem->setPriceDefinition(
                 new QuantityPriceDefinition(0, $context->buildTaxRules($product->getTaxId()), 1)
