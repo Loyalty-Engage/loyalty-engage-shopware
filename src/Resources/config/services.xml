@@ -79,12 +79,12 @@
 
         <!-- Loyalty Free Product Processor: forces loyalty product prices to €0.
              Must run AFTER Shopware's default product processor (priority 5000)
-             but BEFORE Shopware's PromotionProcessor (priority 4800), so that
+             but BEFORE Shopware's PromotionProcessor (priority 4900), so that
              discount codes calculate on the already-zeroed price.
-             Priority 4900 ensures correct ordering. -->
+             Priority 4950 ensures correct ordering (between 5000 and 4900). -->
         <service id="LoyaltyEngage\Cart\LoyaltyFreeProductProcessor">
             <argument type="service" id="Shopware\Core\Checkout\Cart\Price\QuantityPriceCalculator"/>
-            <tag name="shopware.cart.processor" priority="4900"/>
+            <tag name="shopware.cart.processor" priority="4950"/>
         </service>
 
         <!-- Points Redemption Controller -->
