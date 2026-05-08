@@ -41,7 +41,7 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {
-        parent::__construct($scheduledTaskRepository);
+        parent::__construct($scheduledTaskRepository, $logger);
         $this->orderRepository = $orderRepository;
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->logger = $logger;
@@ -62,7 +62,7 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
     {
         $loyaltyOrderRetrieveLimit = $this->loyaltyEngageApiService->getLoyaltyOrderRetrieveLimit();
         $context = Context::createDefaultContext();
-        
+
         $criteria = new Criteria();
         $criteria->addFilter(new EqualsFilter('customFields.loyalty_order_place', false));
         $criteria->addFilter(new RangeFilter('customFields.loyalty_order_place_retrieve', [
@@ -104,7 +104,7 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
             $response = $this->loyaltyEngageApiService->placeOrder($email, $orderNumber, $products);
 
             $customFields = $order->getCustomFields() ?? [];
-            
+
             if ($response && $response == 200) {
                 $customFields['loyalty_order_place'] = true;
             } else {
