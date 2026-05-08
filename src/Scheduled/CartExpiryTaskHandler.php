@@ -42,7 +42,7 @@ class CartExpiryTaskHandler extends ScheduledTaskHandler
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {
-        parent::__construct($scheduledTaskRepository);
+        parent::__construct($scheduledTaskRepository, $logger);
         $this->orderRepository = $orderRepository;
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->logger = $logger;
@@ -63,14 +63,14 @@ class CartExpiryTaskHandler extends ScheduledTaskHandler
     {
         $expiryTime = $this->loyaltyEngageApiService->getExpiryTime();
         $loggerStatus = $this->loyaltyEngageApiService->getLoggerStatus();
-        
+
         $fromTime = new \DateTime('now', new \DateTimezone('UTC'));
         $expiryMinutes = $expiryTime * 60;
         $fromTime->sub(new \DateInterval("PT{$expiryMinutes}S"));
         $fromDate = $fromTime->format('Y-m-d H:i:s');
 
         $context = Context::createDefaultContext();
-        
+
         $criteria = new Criteria();
         $criteria->addFilter(new RangeFilter('createdAt', [
             RangeFilter::LTE => $fromDate,
