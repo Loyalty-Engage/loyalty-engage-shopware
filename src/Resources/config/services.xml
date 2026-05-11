@@ -180,6 +180,7 @@
         </service>
 
         <service id="LoyaltyEngage\Scheduled\CartExpiryTaskHandler">
+            <tag name="messenger.message_handler" />
             <argument type="service" id="scheduled_task.repository" />
             <argument type="service" id="order.repository" />
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
@@ -191,6 +192,7 @@
         </service>
 
         <service id="LoyaltyEngage\Scheduled\OrderPlaceTaskHandler">
+            <tag name="messenger.message_handler" />
             <argument type="service" id="scheduled_task.repository" />
             <argument type="service" id="order.repository" />
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
