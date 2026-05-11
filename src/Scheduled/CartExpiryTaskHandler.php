@@ -78,7 +78,6 @@ class CartExpiryTaskHandler extends ScheduledTaskHandler
         $criteria->addFilter(new NotFilter(NotFilter::CONNECTION_AND, [
             new EqualsFilter('customerId', null),
         ]));
-        $criteria->addFilter(new EqualsFilter('active', true));
         $criteria->addAssociation('customer');
 
         $carts = $this->orderRepository->search($criteria, $context);
