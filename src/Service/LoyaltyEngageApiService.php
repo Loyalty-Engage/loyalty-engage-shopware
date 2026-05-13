@@ -515,4 +515,48 @@ class LoyaltyEngageApiService
             return null;
         }
     }
+
+    /**
+     * Mark a discount code as redeemed in the LoyaltyEngage API.
+     *
+     * Called after a customer successfully places an order using a LoyaltyEngage
+     * discount code. This prevents the code from being reused on the LoyaltyEngage
+     * side as well.
+     *
+     * @param string $email       Customer email address
+     * @param string $code        The discount code that was redeemed
+     * @return bool               True on success, false on failure
+     */
+    public function redeemDiscountCode(string $email, string $code): bool
+    {
+        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/discount-codes/redeem';
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => $this->getDefaultHeaders(),
+                'json' => [
+                    'code' => $code,
+                ],
+            ]);
+
+            $statusCode = $response->getStatusCode();
+
+            if ($this->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage: redeemDiscountCode response', [
+                    'email'         => $email,
+                    'code'          => $code,
+                    'response_code' => $statusCode,
+                ]);
+            }
+
+            return $statusCode === self::HTTP_OK || $statusCode === 204;
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage: redeemDiscountCode error', [
+                'email' => $email,
+                'code'  => $code,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
 }

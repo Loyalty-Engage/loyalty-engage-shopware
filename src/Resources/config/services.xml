@@ -28,6 +28,7 @@
             <argument type="service" id="Shopware\Core\Checkout\Cart\CartPersister"/>
             <argument type="service" id="product.repository"/>
             <argument type="service" id="promotion.repository"/>
+            <argument type="service" id="promotion_individual_code.repository"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
         </service>
@@ -150,6 +151,14 @@
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
             <argument type="service" id="messenger.default_bus"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <!-- Discount Redemption Subscriber: marks LoyaltyEngage codes as redeemed and removes them from Shopware after order placement -->
+        <service id="LoyaltyEngage\Subscriber\DiscountRedemptionSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="promotion_individual_code.repository"/>
+            <argument type="service" id="logger"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 
