@@ -80,34 +80,37 @@ class FreeProductPurchaseSubscriber implements EventSubscriberInterface
                     continue;
                 }
 
-                // Check if the product is free (price is 0)
-                if ((float) $lineItem->getUnitPrice() === 0.0) {
-                    if (!$lineItem->getProductId()) {
-                        $this->logger->warning('LoyaltyEngage: Missing product ID on free line item', [
-                            'orderId' => $orderId,
-                            'lineItemId' => $lineItem->getId()
-                        ]);
-                        continue;
-                    }
-
-                    // Use productNumber (SKU) from payload — the LoyaltyEngage API expects the SKU,
-                    // not the Shopware internal UUID.
-                    $payload = $lineItem->getPayload() ?? [];
-                    $sku = $payload['productNumber'] ?? null;
-
-                    if (!$sku) {
-                        $this->logger->warning('LoyaltyEngage: Missing productNumber in line item payload', [
-                            'orderId' => $orderId,
-                            'lineItemId' => $lineItem->getId()
-                        ]);
-                        continue;
-                    }
-
-                    $freeProducts[] = [
-                        'sku' => $sku,
-                        'quantity' => (int) $lineItem->getQuantity()
-                    ];
+                // Check if the product is a loyalty free product via the payload flag.
+                // This is more reliable than checking the price (which could be 0 for other reasons).
+                $payload = $lineItem->getPayload() ?? [];
+                if (($payload['loyaltyFreeProduct'] ?? false) !== true) {
+                    continue;
                 }
+
+                if (!$lineItem->getProductId()) {
+                    $this->logger->warning('LoyaltyEngage: Missing product ID on loyalty line item', [
+                        'orderId' => $orderId,
+                        'lineItemId' => $lineItem->getId()
+                    ]);
+                    continue;
+                }
+
+                // Use productNumber (SKU) from payload — the LoyaltyEngage API expects the SKU,
+                // not the Shopware internal UUID.
+                $sku = $payload['productNumber'] ?? null;
+
+                if (!$sku) {
+                    $this->logger->warning('LoyaltyEngage: Missing productNumber in loyalty line item payload', [
+                        'orderId' => $orderId,
+                        'lineItemId' => $lineItem->getId()
+                    ]);
+                    continue;
+                }
+
+                $freeProducts[] = [
+                    'sku' => $sku,
+                    'quantity' => (int) $lineItem->getQuantity()
+                ];
             }
 
             if (empty($freeProducts)) {

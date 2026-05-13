@@ -151,21 +151,33 @@ class LoyaltyShopService
                 );
             }
 
-            // Extract discount percentage from API response or use passed value
-            // API may return: discountPercentage, percentage, discount_percentage, value
-            $discountPercentage = (float) (
-                $result['discountPercentage']
-                ?? $result['percentage']
-                ?? $result['discount_percentage']
-                ?? $result['value']
-                ?? $discount
-                ?? 0
-            );
+            // Determine discount type and value from API response.
+            // The API returns either:
+            //   - discountPercentage (float) + discountAmount null  → percentage discount
+            //   - discountPercentage null    + discountAmount (float) → absolute (fixed) discount in EUR
+            $apiDiscountPercentage = isset($result['discountPercentage']) && $result['discountPercentage'] !== null
+                ? (float) $result['discountPercentage']
+                : null;
+
+            $apiDiscountAmount = isset($result['discountAmount']) && $result['discountAmount'] !== null
+                ? (float) $result['discountAmount']
+                : null;
+
+            if ($apiDiscountAmount !== null && $apiDiscountPercentage === null) {
+                // Fixed euro amount (e.g. €7.50)
+                $promotionDiscountValue = $apiDiscountAmount;
+                $promotionDiscountType  = 'absolute';
+            } else {
+                // Percentage discount – fall back to the $discount parameter passed by the widget
+                $promotionDiscountValue = $apiDiscountPercentage ?? (float) $discount;
+                $promotionDiscountType  = 'percentage';
+            }
 
             // Create the Shopware promotion with this code
             $promotionCreated = $this->createShopwarePromotion(
                 $discountCode,
-                $discountPercentage,
+                $promotionDiscountValue,
+                $promotionDiscountType,
                 $context
             );
 
@@ -219,57 +231,60 @@ class LoyaltyShopService
      *  - Active immediately
      *  - Valid for 1 year
      *  - Max 1 redemption per customer
-     *  - Percentage discount on the cart total
+     *  - 'percentage' or 'absolute' discount on the cart total
      *  - Available in all sales channels
+     *
+     * @param string $discountType 'percentage' or 'absolute'
      */
     private function createShopwarePromotion(
         string $code,
-        float $discountPercentage,
+        float $discountValue,
+        string $discountType,
         SalesChannelContext $context
     ): bool {
         try {
             $promotionId = Uuid::randomHex();
             $discountId  = Uuid::randomHex();
 
-            // Use at least 1% if no percentage provided (fallback)
-            if ($discountPercentage <= 0) {
-                $discountPercentage = 1.0;
+            // Sanity check: percentage must be > 0; absolute must be > 0
+            if ($discountValue <= 0) {
+                $discountValue = $discountType === 'absolute' ? 1.0 : 1.0;
             }
 
             $salesChannelId = $context->getSalesChannelId();
 
             $promotionData = [
-                'id'                     => $promotionId,
-                'name'                   => 'LoyaltyEngage: ' . $code,
-                'active'                 => true,
-                'validFrom'              => null,
-                'validUntil'             => (new \DateTime('+1 year'))->format(\DateTime::ATOM),
-                'maxRedemptionsGlobal'   => 1,
+                'id'                        => $promotionId,
+                'name'                      => 'LoyaltyEngage: ' . $code,
+                'active'                    => true,
+                'validFrom'                 => null,
+                'validUntil'                => (new \DateTime('+1 year'))->format(\DateTime::ATOM),
+                'maxRedemptionsGlobal'      => 1,
                 'maxRedemptionsPerCustomer' => 1,
-                'priority'               => 1,
-                'exclusive'              => false,
-                'useCodes'               => true,
-                'useIndividualCodes'     => false,
-                'useSetGroups'           => false,
-                'customerRestriction'    => false,
-                'preventCombination'     => false,
-                'code'                   => $code,
-                'translations'           => [
+                'priority'                  => 1,
+                'exclusive'                 => false,
+                'useCodes'                  => true,
+                'useIndividualCodes'        => false,
+                'useSetGroups'              => false,
+                'customerRestriction'       => false,
+                'preventCombination'        => false,
+                'code'                      => $code,
+                'translations'              => [
                     ['languageId' => $context->getContext()->getLanguageId(), 'name' => 'LoyaltyEngage: ' . $code],
                 ],
-                'salesChannels'          => [
+                'salesChannels'             => [
                     ['salesChannelId' => $salesChannelId, 'priority' => 1],
                 ],
-                'discounts'              => [
+                'discounts'                 => [
                     [
-                        'id'                => $discountId,
-                        'scope'             => 'cart',
-                        'type'              => 'percentage',
-                        'value'             => $discountPercentage,
+                        'id'                    => $discountId,
+                        'scope'                 => 'cart',
+                        'type'                  => $discountType,   // 'percentage' or 'absolute'
+                        'value'                 => $discountValue,  // e.g. 10.0 for 10% or €10
                         'considerAdvancedRules' => false,
-                        'sorterKey'         => 'PRICE_ASC',
-                        'applierKey'        => 'ALL',
-                        'usageKey'          => 'ALL',
+                        'sorterKey'             => 'PRICE_ASC',
+                        'applierKey'            => 'ALL',
+                        'usageKey'              => 'ALL',
                     ],
                 ],
             ];
@@ -277,9 +292,10 @@ class LoyaltyShopService
             $this->promotionRepository->create([$promotionData], $context->getContext());
 
             $this->logger->info('LoyaltyShopService: Shopware promotion created', [
-                'promotionId'        => $promotionId,
-                'code'               => $code,
-                'discountPercentage' => $discountPercentage,
+                'promotionId'   => $promotionId,
+                'code'          => $code,
+                'discountType'  => $discountType,
+                'discountValue' => $discountValue,
             ]);
 
             return true;
