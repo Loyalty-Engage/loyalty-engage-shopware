@@ -529,13 +529,15 @@ class LoyaltyEngageApiService
      */
     public function redeemDiscountCode(string $email, string $code): bool
     {
-        $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/discount-codes/redeem';
+        // PUT /api/v1/discount/{discountCode}/redeem
+        // body: { "identifier": "{email}" }
+        $url = $this->getValidatedApiUrl() . '/api/v1/discount/' . urlencode($code) . '/redeem';
 
         try {
-            $response = $this->httpClient->request('POST', $url, [
+            $response = $this->httpClient->request('PUT', $url, [
                 'headers' => $this->getDefaultHeaders(),
                 'json' => [
-                    'code' => $code,
+                    'identifier' => $email,
                 ],
             ]);
 
