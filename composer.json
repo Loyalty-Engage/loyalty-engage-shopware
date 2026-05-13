@@ -2,7 +2,7 @@
     "name": "loyalty-engage/loyalty-shop",
     "description": "Shopware 6 plugin for LoyaltyEngage integration with points redemption in checkout",
     "type": "shopware-platform-plugin",
-    "version": "2.4.2",
+    "version": "2.4.3",
     "license": "MIT",
     "authors": [
         {

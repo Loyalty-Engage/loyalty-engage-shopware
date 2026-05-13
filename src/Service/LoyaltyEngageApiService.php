@@ -210,6 +210,14 @@ class LoyaltyEngageApiService
             'quantity' => 1
         ];
 
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: Add to Cart Request', [
+                'url'   => $url,
+                'email' => $email,
+                'sku'   => $sku,
+            ]);
+        }
+
         try {
             $response = $this->httpClient->request('POST', $url, [
                 'headers' => $this->getDefaultHeaders(),
@@ -221,20 +229,18 @@ class LoyaltyEngageApiService
 
             if ($this->getLoggerStatus()) {
                 $this->logger->info('LoyaltyEngage: Add to Cart Response', [
-                    'sku' => $sku,
+                    'sku'           => $sku,
                     'response_code' => $statusCode,
-                    'response_body' => $content
+                    'response_body' => $content,
                 ]);
             }
 
             return $statusCode;
         } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
-            if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage: Add to Cart Error', [
-                    'sku' => $sku,
-                    'error' => $e->getMessage()
-                ]);
-            }
+            $this->logger->error('LoyaltyEngage: Add to Cart Error', [
+                'sku'   => $sku,
+                'error' => $e->getMessage(),
+            ]);
             return 0;
         }
     }
@@ -355,10 +361,12 @@ class LoyaltyEngageApiService
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/events';
 
-        $this->logger->info('LoyaltyEngage: Sending event to API', [
-            'url' => $url,
-            'payload' => $payload,
-        ]);
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: Sending event to API', [
+                'url'     => $url,
+                'payload' => $payload,
+            ]);
+        }
 
         try {
             $response = $this->httpClient->request('POST', $url, [
@@ -369,10 +377,12 @@ class LoyaltyEngageApiService
             $statusCode = $response->getStatusCode();
             $content = $response->getContent(false);
 
-            $this->logger->info('LoyaltyEngage: API event response', [
-                'statusCode' => $statusCode,
-                'content' => $content
-            ]);
+            if ($this->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage: API event response', [
+                    'statusCode' => $statusCode,
+                    'content'    => $content,
+                ]);
+            }
 
             return $statusCode;
         } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
