@@ -12,6 +12,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\ContainsFilter;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Psr\Log\LoggerInterface;
@@ -274,6 +275,7 @@ class LoyaltyShopService
         // Try to find an existing promotion for this SKU
         $criteria = new Criteria();
         $criteria->addFilter(new EqualsFilter('name', $promotionName));
+        $criteria->addAssociation('discounts');
         $criteria->setLimit(1);
 
         $searchResult = $this->promotionRepository->search($criteria, $context->getContext());
@@ -281,6 +283,17 @@ class LoyaltyShopService
 
         if (!empty($existingIds)) {
             $existingId = reset($existingIds);
+
+            // Update the discount value/type if it differs from what the API returned.
+            // This fixes promotions that were created with the wrong value (e.g. value=1
+            // from the old fallback) before this fix was deployed.
+            $this->updatePromotionDiscountIfNeeded(
+                $existingId,
+                $discountValue,
+                $discountType,
+                $context->getContext()
+            );
+
             $this->logger->info('LoyaltyShopService: Found existing promotion for SKU', [
                 'sku'         => $sku,
                 'promotionId' => $existingId,
@@ -290,6 +303,77 @@ class LoyaltyShopService
 
         // Create a new shared promotion for this SKU
         return $this->createSharedPromotion($sku, $promotionName, $discountValue, $discountType, $context);
+    }
+
+    /**
+     * Update the discount value and type on an existing promotion if they differ
+     * from the values returned by the API. This self-heals promotions that were
+     * created with the wrong value before the absolute-discount fix was deployed.
+     */
+    private function updatePromotionDiscountIfNeeded(
+        string $promotionId,
+        float $discountValue,
+        string $discountType,
+        Context $context
+    ): void {
+        try {
+            // Load the promotion with its discounts
+            $criteria = new Criteria([$promotionId]);
+            $criteria->addAssociation('discounts');
+
+            $promotion = $this->promotionRepository->search($criteria, $context)->first();
+            if ($promotion === null) {
+                return;
+            }
+
+            $vars     = $promotion->getVars();
+            $discounts = $vars['discounts'] ?? null;
+
+            if ($discounts === null) {
+                return;
+            }
+
+            // Iterate over discount entities and update any that have the wrong value/type
+            foreach ($discounts as $discountEntity) {
+                $discountVars      = $discountEntity->getVars();
+                $currentValue      = (float) ($discountVars['value'] ?? 0);
+                $currentType       = (string) ($discountVars['type'] ?? '');
+                $discountEntityId  = (string) ($discountVars['id'] ?? '');
+
+                if ($discountEntityId === '') {
+                    continue;
+                }
+
+                if (abs($currentValue - $discountValue) > 0.001 || $currentType !== $discountType) {
+                    $this->promotionRepository->update([
+                        [
+                            'id'        => $promotionId,
+                            'discounts' => [
+                                [
+                                    'id'    => $discountEntityId,
+                                    'type'  => $discountType,
+                                    'value' => $discountValue,
+                                ],
+                            ],
+                        ],
+                    ], $context);
+
+                    $this->logger->info('LoyaltyShopService: Updated promotion discount value', [
+                        'promotionId'   => $promotionId,
+                        'discountId'    => $discountEntityId,
+                        'oldType'       => $currentType,
+                        'oldValue'      => $currentValue,
+                        'newType'       => $discountType,
+                        'newValue'      => $discountValue,
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('LoyaltyShopService: Could not update promotion discount', [
+                'promotionId' => $promotionId,
+                'error'       => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
