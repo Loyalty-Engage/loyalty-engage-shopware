@@ -296,27 +296,55 @@ class LoyaltyEngageApiService
      */
     public function placeOrder(string $email, string $orderId, array $products): ?int
     {
+        $result = $this->placeOrderWithResponse($email, $orderId, $products);
+        return $result['statusCode'] ?? null;
+    }
+
+    /**
+     * Place an order in the loyalty system and return both status code and response body.
+     *
+     * @return array{statusCode: int|null, body: string|null}
+     */
+    public function placeOrderWithResponse(string $email, string $orderId, array $products): array
+    {
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/purchase';
         $data = [
-            'orderId' => $orderId,
-            'products' => $products
+            'orderId'  => $orderId,
+            'products' => $products,
         ];
 
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: placeOrder request', [
+                'url'     => $url,
+                'orderId' => $orderId,
+                'payload' => $data,
+            ]);
+        }
+
         try {
-            $response = $this->httpClient->request('POST', $url, [
+            $response   = $this->httpClient->request('POST', $url, [
                 'headers' => $this->getDefaultHeaders(),
-                'json' => $data,
+                'json'    => $data,
             ]);
 
-            return $response->getStatusCode();
-        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $statusCode = $response->getStatusCode();
+            $body       = $response->getContent(false);
+
             if ($this->getLoggerStatus()) {
-                $this->logger->error('LoyaltyEngage: Place Order Error', [
-                    'orderId' => $orderId,
-                    'error' => $e->getMessage()
+                $this->logger->info('LoyaltyEngage: placeOrder response', [
+                    'orderId'    => $orderId,
+                    'statusCode' => $statusCode,
+                    'body'       => $body,
                 ]);
             }
-            return null;
+
+            return ['statusCode' => $statusCode, 'body' => $body];
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage: Place Order Error', [
+                'orderId' => $orderId,
+                'error'   => $e->getMessage(),
+            ]);
+            return ['statusCode' => null, 'body' => $e->getMessage()];
         }
     }
 

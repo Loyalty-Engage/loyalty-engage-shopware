@@ -39,34 +39,39 @@ class FreeProductPurchaseMessageHandler
     {
         try {
             $this->logger->info('Processing free product purchase message', [
-                'email' => $message->getEmail(),
-                'orderId' => $message->getOrderId()
+                'email'    => $message->getEmail(),
+                'orderId'  => $message->getOrderId(),
+                'products' => $message->getProducts(),
             ]);
 
-            $response = $this->loyaltyEngageApiService->placeOrder(
+            $response = $this->loyaltyEngageApiService->placeOrderWithResponse(
                 $message->getEmail(),
                 $message->getOrderId(),
                 $message->getProducts()
             );
 
-            if ($response === 200) {
+            $statusCode  = $response['statusCode'] ?? null;
+            $body        = $response['body'] ?? null;
+
+            if ($statusCode === 200) {
                 $this->logger->info('Free product purchase sent successfully', [
-                    'email' => $message->getEmail(),
-                    'orderId' => $message->getOrderId()
+                    'email'   => $message->getEmail(),
+                    'orderId' => $message->getOrderId(),
                 ]);
             } else {
                 $this->logger->error('Failed to send free product purchase', [
-                    'email' => $message->getEmail(),
-                    'orderId' => $message->getOrderId(),
-                    'response' => $response
+                    'email'      => $message->getEmail(),
+                    'orderId'    => $message->getOrderId(),
+                    'statusCode' => $statusCode,
+                    'body'       => $body,
                 ]);
             }
         } catch (\Throwable $e) {
             $this->logger->error('Error processing free product purchase message', [
-                'email' => $message->getEmail(),
+                'email'   => $message->getEmail(),
                 'orderId' => $message->getOrderId(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
         }
     }
