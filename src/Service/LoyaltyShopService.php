@@ -509,6 +509,14 @@ class LoyaltyShopService
 
     /**
      * Apply a promotion code to the customer's cart.
+     *
+     * We intentionally do NOT call recalculate() here because the individual
+     * promotion code was just written to the database in the same request.
+     * Calling recalculate() immediately can cause Shopware to throw
+     * "Promo code could not be found" due to a timing/transaction issue where
+     * the freshly inserted code is not yet visible to the cart processor.
+     * Shopware will automatically recalculate the cart on the next page load,
+     * at which point the code is fully committed and will be found correctly.
      */
     private function applyPromotionToCart(string $code, SalesChannelContext $context): bool
     {
@@ -531,7 +539,8 @@ class LoyaltyShopService
             $promotionLineItem->setStackable(false);
 
             $cart->add($promotionLineItem);
-            $this->cartService->recalculate($cart, $context);
+            // Save only — do NOT recalculate() here to avoid "code not found" errors.
+            // Shopware recalculates automatically on the next cart/checkout page load.
             $this->cartPersister->save($cart, $context);
 
             return true;
