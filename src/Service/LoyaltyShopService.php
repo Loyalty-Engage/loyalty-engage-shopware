@@ -430,7 +430,7 @@ class LoyaltyShopService
                 'validFrom'                 => null,
                 'validUntil'                => (new \DateTime('+10 years'))->format(\DateTime::ATOM),
                 'maxRedemptionsGlobal'      => null,  // No global limit; each individual code has its own limit
-                'maxRedemptionsPerCustomer' => 1,
+                'maxRedemptionsPerCustomer' => null,  // No per-customer limit on the promotion itself; uniqueness is enforced by the individual code (one code per claim, deleted after redemption)
                 'priority'                  => 1,
                 'exclusive'                 => false,
                 'useCodes'                  => true,
