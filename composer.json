@@ -15,8 +15,8 @@
     "extra": {
         "shopware-plugin-class": "LoyaltyEngage\\LoyaltyEngage",
         "label": {
-            "en-GB": "Loyalty Engage Shop",
-            "de-DE": "Loyalty Engage Shop"
+            "en-GB": "Loyalty Engage",
+            "de-DE": "Loyalty Engage"
         },
         "description": {
             "en-GB": "Add products to cart based on loyalty points",
