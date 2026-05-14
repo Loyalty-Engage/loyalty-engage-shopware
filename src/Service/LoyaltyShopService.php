@@ -79,8 +79,9 @@ class LoyaltyShopService
      *
      * Flow:
      *  1. Look up the Shopware product UUID by productNumber (= SKU).
-     *  2. Call LoyaltyEngage API to verify eligibility / deduct points.
-     *  3. Add the product to the cart at price €0.
+     *  2. Check if the maximum number of loyalty products per cart has been reached.
+     *  3. Call LoyaltyEngage API to verify eligibility / deduct points.
+     *  4. Add the product to the cart at price €0.
      */
     public function addProductBySku(string $email, string $sku, SalesChannelContext $context): array
     {
@@ -90,13 +91,34 @@ class LoyaltyShopService
             return $this->error("Product with SKU '{$sku}' not found.");
         }
 
-        // 2. Check eligibility with LoyaltyEngage API
+        // 2. Check if the maximum number of loyalty products per cart has been reached
+        $maxLoyaltyProducts = $this->loyaltyEngageApiService->getMaxLoyaltyProductsPerCart();
+        if ($maxLoyaltyProducts > 0) {
+            $cart = $this->cartService->getCart($context->getToken(), $context);
+            $currentLoyaltyCount = 0;
+            foreach ($cart->getLineItems() as $lineItem) {
+                $payload = $lineItem->getPayload() ?? [];
+                if (($payload['loyaltyFreeProduct'] ?? false) === true) {
+                    $currentLoyaltyCount++;
+                }
+            }
+            if ($currentLoyaltyCount >= $maxLoyaltyProducts) {
+                return $this->error(
+                    sprintf(
+                        'Maximum loyalty products per cart reached. You can only add %d loyalty product(s) per purchase.',
+                        $maxLoyaltyProducts
+                    )
+                );
+            }
+        }
+
+        // 3. Check eligibility with LoyaltyEngage API
         $apiStatus = $this->loyaltyEngageApiService->addToCart($email, $sku);
         if ($apiStatus !== self::HTTP_OK) {
             return $this->error('Product could not be added. User is not eligible.');
         }
 
-        // 3. Add to Shopware cart at €0
+        // 4. Add to Shopware cart at €0
         try {
             $criteria = new Criteria([$productId]);
             /** @var ProductEntity|null $product */

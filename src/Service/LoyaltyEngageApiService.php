@@ -157,6 +157,15 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Get Maximum Loyalty Products per Cart from config.
+     * Returns 0 for unlimited.
+     */
+    public function getMaxLoyaltyProductsPerCart(): int
+    {
+        return (int) ($this->systemConfigService->get('LoyaltyEngage.config.maxLoyaltyProductsPerCart') ?? 1);
+    }
+
+    /**
      * Get the validated and sanitized API base URL.
      * Always returns a URL starting with the required base.
      */

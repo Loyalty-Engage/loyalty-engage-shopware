@@ -68,6 +68,21 @@
     </card>
     
     <card>
+        <title>Loyalty Shop Settings</title>
+        <title lang="nl-NL">Loyalty Shop Instellingen</title>
+
+        <input-field type="int">
+            <name>maxLoyaltyProductsPerCart</name>
+            <label>Maximum Loyalty Products per Cart</label>
+            <label lang="nl-NL">Maximum loyalty producten per winkelmand</label>
+            <helpText>Maximum number of loyalty (free) products a customer can add per purchase. Set to 0 for unlimited.</helpText>
+            <helpText lang="nl-NL">Maximum aantal loyalty (gratis) producten dat een klant per aankoop kan toevoegen. Stel in op 0 voor onbeperkt.</helpText>
+            <defaultValue>1</defaultValue>
+            <min>0</min>
+        </input-field>
+    </card>
+
+    <card>
         <title>Loyalty Export Settings</title>
         <input-field type="bool">
             <name>returnEvent</name>
