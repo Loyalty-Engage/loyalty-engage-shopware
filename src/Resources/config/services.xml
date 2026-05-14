@@ -141,7 +141,6 @@
 
         <service id="LoyaltyEngage\Subscriber\FreeProductPurchaseSubscriber">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
-            <argument type="service" id="order.repository"/>
             <argument type="service" id="logger"/>
             <argument type="service" id="messenger.default_bus"/>
             <tag name="kernel.event_subscriber"/>
@@ -181,19 +180,6 @@
 
         <service id="LoyaltyEngage\Core\Rule\CustomerCoinsRule">
             <tag name="shopware.rule.definition"/>
-        </service>
-
-        <!-- Product Feed Service & Controller -->
-        <service id="LoyaltyEngage\Service\ProductFeedService">
-            <argument type="service" id="product.repository"/>
-            <argument type="service" id="logger"/>
-        </service>
-
-        <service id="LoyaltyEngage\Controller\Api\ProductFeedController" public="true">
-            <argument type="service" id="LoyaltyEngage\Service\ProductFeedService"/>
-            <argument type="service" id="sales_channel.repository"/>
-            <argument type="service" id="logger"/>
-            <tag name="controller.service_arguments"/>
         </service>
 
         <!-- Scheduled Tasks -->

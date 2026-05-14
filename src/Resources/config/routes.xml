@@ -68,16 +68,6 @@
         <default key="_loginRequired">true</default>
     </route>
 
-    <!-- Product Feed (NDJSON for LoyaltyEngage / Channable) -->
-    <route id="api.action.loyalty.feed.products" path="/api/loyalty/feed/products" methods="GET">
-        <default key="_controller">LoyaltyEngage\Controller\Api\ProductFeedController::feed</default>
-        <default key="_routeScope">
-            <list>
-                <string>api</string>
-            </list>
-        </default>
-    </route>
-
     <!-- Admin API routes (bearer token auth) -->
     <route id="api.action.loyalty.cart.add" path="/api/v{version}/loyalty/shop/{email}/cart/add" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Api\LoyaltyCartController::addProductApi</default>
