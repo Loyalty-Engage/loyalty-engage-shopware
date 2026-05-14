@@ -15,20 +15,30 @@ class FreeProductRemoveMessage
     private $productId;
 
     /**
+     * The product SKU (productNumber) used by the LoyaltyEngage API.
+     * This is different from the Shopware product UUID ($productId).
+     *
+     * @var string
+     */
+    private $sku;
+
+    /**
      * @var int
      */
     private $quantity;
 
     /**
      * @param string $email
-     * @param string $productId
-     * @param int $quantity
+     * @param string $productId  Shopware product UUID (for logging)
+     * @param string $sku        Product SKU / productNumber (sent to LoyaltyEngage API)
+     * @param int    $quantity
      */
-    public function __construct(string $email, string $productId, int $quantity)
+    public function __construct(string $email, string $productId, string $sku, int $quantity)
     {
-        $this->email = $email;
+        $this->email     = $email;
         $this->productId = $productId;
-        $this->quantity = $quantity;
+        $this->sku       = $sku;
+        $this->quantity  = $quantity;
     }
 
     /**
@@ -45,6 +55,14 @@ class FreeProductRemoveMessage
     public function getProductId(): string
     {
         return $this->productId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSku(): string
+    {
+        return $this->sku;
     }
 
     /**

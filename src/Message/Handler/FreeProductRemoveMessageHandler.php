@@ -10,20 +10,9 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 class FreeProductRemoveMessageHandler
 {
-    /**
-     * @var LoyaltyEngageApiService
-     */
-    private $loyaltyEngageApiService;
+    private LoyaltyEngageApiService $loyaltyEngageApiService;
+    private LoggerInterface $logger;
 
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    /**
-     * @param LoyaltyEngageApiService $loyaltyEngageApiService
-     * @param LoggerInterface $logger
-     */
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
@@ -32,41 +21,42 @@ class FreeProductRemoveMessageHandler
         $this->logger = $logger;
     }
 
-    /**
-     * @param FreeProductRemoveMessage $message
-     */
     public function __invoke(FreeProductRemoveMessage $message): void
     {
         try {
-            $this->logger->info('Processing free product remove message', [
-                'email' => $message->getEmail(),
-                'productId' => $message->getProductId()
+            $this->logger->info('FreeProductRemoveMessageHandler: Processing free product remove message', [
+                'email'     => $message->getEmail(),
+                'productId' => $message->getProductId(),
+                'sku'       => $message->getSku(),
+                'quantity'  => $message->getQuantity(),
             ]);
 
+            // Use the SKU (productNumber) — NOT the Shopware UUID — because the
+            // LoyaltyEngage API identifies products by their SKU.
             $response = $this->loyaltyEngageApiService->removeItem(
                 $message->getEmail(),
-                $message->getProductId(),
+                $message->getSku(),
                 $message->getQuantity()
             );
 
             if ($response === 200) {
-                $this->logger->info('Free product remove sent successfully', [
+                $this->logger->info('FreeProductRemoveMessageHandler: Free product remove sent successfully', [
                     'email' => $message->getEmail(),
-                    'productId' => $message->getProductId()
+                    'sku'   => $message->getSku(),
                 ]);
             } else {
-                $this->logger->error('Failed to send free product remove', [
-                    'email' => $message->getEmail(),
-                    'productId' => $message->getProductId(),
-                    'response' => $response
+                $this->logger->error('FreeProductRemoveMessageHandler: Failed to send free product remove', [
+                    'email'    => $message->getEmail(),
+                    'sku'      => $message->getSku(),
+                    'response' => $response,
                 ]);
             }
         } catch (\Throwable $e) {
-            $this->logger->error('Error processing free product remove message', [
+            $this->logger->error('FreeProductRemoveMessageHandler: Error processing free product remove message', [
                 'email' => $message->getEmail(),
-                'productId' => $message->getProductId(),
+                'sku'   => $message->getSku(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
