@@ -75,19 +75,44 @@ class PurchaseSubscriber implements EventSubscriberInterface
                 return;
             }
 
-            $email = $customer->getEmail();
+            $email       = $customer->getEmail();
             $orderNumber = $order->getOrderNumber();
-            $orderDate = $order->getOrderDateTime()?->format(DATE_ATOM) ?? '';
-            $products = [];
+            $orderDate   = $order->getOrderDateTime()?->format(DATE_ATOM) ?? '';
+
+            // ----------------------------------------------------------------
+            // Step 1: Collect product line items and calculate totals.
+            //
+            // We skip:
+            //   - 'delivery'  → shipping costs must never be rewarded
+            //   - 'promotion' → handled separately as discount
+            //   - any other non-product type
+            // ----------------------------------------------------------------
+            $rawProducts   = [];   // [['sku', 'unitPrice', 'quantity', 'subtotal'], ...]
+            $productTotal  = 0.0;  // sum of (unitPrice × quantity) for all products
+            $totalDiscount = 0.0;  // absolute value of all promotion discounts
 
             foreach ($order->getLineItems() as $lineItem) {
-                if ($lineItem->getType() !== 'product') {
+                $type = $lineItem->getType();
+
+                // Accumulate discount from promotion line items (value is negative)
+                if ($type === 'promotion') {
+                    $totalDiscount += abs((float) $lineItem->getTotalPrice());
+                    continue;
+                }
+
+                // Skip shipping / delivery line items — never reward these
+                if ($type === 'delivery' || $type === 'shipping') {
+                    continue;
+                }
+
+                // Only process product line items from here on
+                if ($type !== 'product') {
                     continue;
                 }
 
                 if (!$lineItem->getProductId()) {
                     $this->logger->warning('LoyaltyEngage: Missing product ID on line item', [
-                        'orderId' => $orderId,
+                        'orderId'    => $orderId,
                         'lineItemId' => $lineItem->getId()
                     ]);
                     continue;
@@ -96,26 +121,82 @@ class PurchaseSubscriber implements EventSubscriberInterface
                 // Use productNumber (SKU) from payload — the LoyaltyEngage API expects the SKU,
                 // not the Shopware internal UUID.
                 $payload = $lineItem->getPayload() ?? [];
-                $sku = $payload['productNumber'] ?? null;
+                $sku     = $payload['productNumber'] ?? null;
 
                 if (!$sku) {
                     $this->logger->warning('LoyaltyEngage: Missing productNumber in line item payload', [
-                        'orderId' => $orderId,
+                        'orderId'    => $orderId,
                         'lineItemId' => $lineItem->getId()
                     ]);
                     continue;
                 }
 
+                $unitPrice = (float) $lineItem->getUnitPrice();
+                $quantity  = (int)   $lineItem->getQuantity();
+                $subtotal  = $unitPrice * $quantity;
+
+                $rawProducts[]  = [
+                    'sku'       => $sku,
+                    'unitPrice' => $unitPrice,
+                    'quantity'  => $quantity,
+                    'subtotal'  => $subtotal,
+                ];
+                $productTotal += $subtotal;
+            }
+
+            if (empty($rawProducts)) {
+                $this->logger->error('LoyaltyEngage: No valid product line items found', ['orderId' => $orderId]);
+                return;
+            }
+
+            // ----------------------------------------------------------------
+            // Step 2: Distribute the total discount proportionally across
+            //         products based on each product's share of the subtotal.
+            //
+            // Formula per product:
+            //   discountShare     = productSubtotal / productTotal
+            //   discountAmount    = totalDiscount × discountShare
+            //   effectiveSubtotal = productSubtotal - discountAmount
+            //   effectiveUnitPrice = effectiveSubtotal / quantity   (rounded to 2 dp)
+            //
+            // To avoid floating-point drift we track the remaining discount and
+            // assign any leftover to the last product.
+            // ----------------------------------------------------------------
+            $products          = [];
+            $remainingDiscount = $totalDiscount;
+            $lastIndex         = count($rawProducts) - 1;
+
+            foreach ($rawProducts as $i => $raw) {
+                if ($i === $lastIndex) {
+                    // Assign all remaining discount to the last product to avoid rounding gaps
+                    $discountForProduct = $remainingDiscount;
+                } elseif ($productTotal > 0.0) {
+                    $share              = $raw['subtotal'] / $productTotal;
+                    $discountForProduct = round($totalDiscount * $share, 2);
+                    $remainingDiscount -= $discountForProduct;
+                } else {
+                    $discountForProduct = 0.0;
+                }
+
+                $effectiveSubtotal  = max(0.0, $raw['subtotal'] - $discountForProduct);
+                $effectiveUnitPrice = $raw['quantity'] > 0
+                    ? round($effectiveSubtotal / $raw['quantity'], 2)
+                    : 0.0;
+
                 $products[] = [
-                    'sku' => $sku,
-                    'price' => (float) $lineItem->getUnitPrice(),
-                    'quantity' => (int) $lineItem->getQuantity()
+                    'sku'      => $raw['sku'],
+                    'price'    => $effectiveUnitPrice,
+                    'quantity' => $raw['quantity'],
                 ];
             }
 
-            if (empty($products)) {
-                $this->logger->error('LoyaltyEngage: No valid product line items found', ['orderId' => $orderId]);
-                return;
+            if ($this->loyaltyEngageApiService->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage: Purchase event products with discount distribution', [
+                    'orderId'       => $orderNumber,
+                    'productTotal'  => $productTotal,
+                    'totalDiscount' => $totalDiscount,
+                    'products'      => $products,
+                ]);
             }
 
             $message = new PurchaseMessage($email, $orderNumber, $orderDate, $products);
