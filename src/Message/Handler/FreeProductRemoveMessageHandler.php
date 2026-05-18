@@ -23,39 +23,32 @@ class FreeProductRemoveMessageHandler
 
     public function __invoke(FreeProductRemoveMessage $message): void
     {
-        $this->logger->info('LoyaltyEngage: Processing free product remove message', [
-            'email'     => $message->getEmail(),
-            'productId' => $message->getProductId(),
-            'sku'       => $message->getSku(),
-            'quantity'  => $message->getQuantity(),
+        $email = $message->getEmail();
+
+        $this->logger->info('LoyaltyEngage: Processing free product remove — calling removeAllItems', [
+            'email' => $email,
         ]);
 
-        // Use the SKU (productNumber) — NOT the Shopware UUID — because the
-        // LoyaltyEngage API identifies products by their SKU.
-        $response = $this->loyaltyEngageApiService->removeItem(
-            $message->getEmail(),
-            $message->getSku(),
-            $message->getQuantity()
-        );
+        // Use removeAllItems() instead of removeItem() per product.
+        // This ensures exactly ONE API call per customer regardless of how many
+        // loyalty products were removed, preventing rate-limiting (HTTP 429).
+        $response = $this->loyaltyEngageApiService->removeAllItems($email);
 
         if ($response === 200) {
-            $this->logger->info('LoyaltyEngage: Free product remove sent successfully', [
-                'email' => $message->getEmail(),
-                'sku'   => $message->getSku(),
+            $this->logger->info('LoyaltyEngage: removeAllItems sent successfully', [
+                'email' => $email,
             ]);
         } else {
-            $this->logger->error('LoyaltyEngage: Failed to send free product remove — will retry', [
-                'email'    => $message->getEmail(),
-                'sku'      => $message->getSku(),
+            $this->logger->error('LoyaltyEngage: Failed to send removeAllItems — will retry', [
+                'email'    => $email,
                 'response' => $response,
             ]);
 
             // Throw exception so Symfony Messenger retries automatically (up to max_retries)
             throw new \RuntimeException(
                 sprintf(
-                    'LoyaltyEngage free product remove failed for %s / SKU %s with HTTP status %s',
-                    $message->getEmail(),
-                    $message->getSku(),
+                    'LoyaltyEngage removeAllItems failed for %s with HTTP status %s',
+                    $email,
                     $response ?? 'null'
                 )
             );

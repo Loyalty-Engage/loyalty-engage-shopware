@@ -9,9 +9,20 @@ use Shopware\Core\Checkout\Cart\Event\LineItemRemovedEvent;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 class FreeProductRemoveSubscriber implements EventSubscriberInterface
 {
+    /**
+     * Delay in milliseconds before the removeAllItems API call is made.
+     *
+     * A 5-second delay ensures that if a customer removes multiple loyalty
+     * products in quick succession, all removals are batched into a single
+     * removeAllItems() call instead of firing one API call per product.
+     * This prevents rate-limiting (HTTP 429) on the LoyaltyEngage delete endpoint.
+     */
+    private const REMOVE_DELAY_MS = 5000;
+
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private LoggerInterface $logger;
     private MessageBusInterface $messageBus;
@@ -29,7 +40,7 @@ class FreeProductRemoveSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            LineItemRemovedEvent::class => 'onLineItemRemoved'
+            LineItemRemovedEvent::class => 'onLineItemRemoved',
         ];
     }
 
@@ -57,41 +68,24 @@ class FreeProductRemoveSubscriber implements EventSubscriberInterface
                 return;
             }
 
-            $email     = $customer->getEmail();
-            $productId = $lineItem->getReferencedId();
-            $quantity  = (int) $lineItem->getQuantity();
+            $email = $customer->getEmail();
 
-            // The LoyaltyEngage API expects the product SKU (productNumber), not the Shopware UUID.
-            // The productNumber is stored in the cart line item payload by Shopware.
-            $sku = $payload['productNumber'] ?? null;
-
-            if (!$email || !$productId) {
-                $this->logger->warning('FreeProductRemoveSubscriber: Missing email or product ID for free product removal', [
-                    'email'     => $email,
-                    'productId' => $productId,
-                ]);
+            if (!$email) {
+                $this->logger->warning('FreeProductRemoveSubscriber: Missing email for free product removal');
                 return;
             }
 
-            if (!$sku) {
-                $this->logger->warning('FreeProductRemoveSubscriber: Could not resolve SKU from cart payload, falling back to productId', [
-                    'productId' => $productId,
-                ]);
-                // Fall back to productId so the message is still dispatched (API call may fail, but we log it)
-                $sku = $productId;
-            }
+            // Dispatch a delayed removeAllItems message.
+            // The delay batches rapid successive removals into a single API call,
+            // preventing rate-limiting on the LoyaltyEngage delete endpoint.
+            $message = new FreeProductRemoveMessage($email);
 
-            // Dispatch an async message so the cart response is not delayed by the API call
-            $message = new FreeProductRemoveMessage($email, $productId, $sku, $quantity);
-
-            $this->logger->info('FreeProductRemoveSubscriber: Dispatching free product remove message', [
-                'email'     => $email,
-                'productId' => $productId,
-                'sku'       => $sku,
-                'quantity'  => $quantity,
+            $this->logger->info('FreeProductRemoveSubscriber: Dispatching removeAllItems message (delayed)', [
+                'email' => $email,
+                'delayMs' => self::REMOVE_DELAY_MS,
             ]);
 
-            $this->messageBus->dispatch($message);
+            $this->messageBus->dispatch($message, [new DelayStamp(self::REMOVE_DELAY_MS)]);
         } catch (\Throwable $e) {
             $this->logger->error('FreeProductRemoveSubscriber: Error handling line item removal', [
                 'error' => $e->getMessage(),

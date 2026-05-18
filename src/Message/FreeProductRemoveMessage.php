@@ -2,74 +2,25 @@
 
 namespace LoyaltyEngage\Message;
 
+/**
+ * Message dispatched when a loyalty free product is removed from the cart.
+ *
+ * Instead of calling removeItem() per product (which causes a burst of API calls
+ * and triggers rate limiting), we dispatch a single removeAllItems() call per
+ * customer. The message is delayed by 5 seconds so that if multiple products are
+ * removed in quick succession, only one API call is made after the dust settles.
+ */
 class FreeProductRemoveMessage
 {
-    /**
-     * @var string
-     */
-    private $email;
+    private string $email;
 
-    /**
-     * @var string
-     */
-    private $productId;
-
-    /**
-     * The product SKU (productNumber) used by the LoyaltyEngage API.
-     * This is different from the Shopware product UUID ($productId).
-     *
-     * @var string
-     */
-    private $sku;
-
-    /**
-     * @var int
-     */
-    private $quantity;
-
-    /**
-     * @param string $email
-     * @param string $productId  Shopware product UUID (for logging)
-     * @param string $sku        Product SKU / productNumber (sent to LoyaltyEngage API)
-     * @param int    $quantity
-     */
-    public function __construct(string $email, string $productId, string $sku, int $quantity)
+    public function __construct(string $email)
     {
-        $this->email     = $email;
-        $this->productId = $productId;
-        $this->sku       = $sku;
-        $this->quantity  = $quantity;
+        $this->email = $email;
     }
 
-    /**
-     * @return string
-     */
     public function getEmail(): string
     {
         return $this->email;
-    }
-
-    /**
-     * @return string
-     */
-    public function getProductId(): string
-    {
-        return $this->productId;
-    }
-
-    /**
-     * @return string
-     */
-    public function getSku(): string
-    {
-        return $this->sku;
-    }
-
-    /**
-     * @return int
-     */
-    public function getQuantity(): int
-    {
-        return $this->quantity;
     }
 }
