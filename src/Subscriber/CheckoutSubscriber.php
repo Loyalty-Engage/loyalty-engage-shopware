@@ -3,6 +3,7 @@
 namespace LoyaltyEngage\Subscriber;
 
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
+use LoyaltyEngage\Service\PointsRedemptionService;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -16,7 +17,6 @@ use Psr\Log\LoggerInterface;
 
 class CheckoutSubscriber implements EventSubscriberInterface
 {
-    private const LOYALTY_DISCOUNT_LINE_ITEM_TYPE = 'loyalty_points_discount';
 
     /**
      * @var LoyaltyEngageApiService
@@ -164,7 +164,7 @@ class CheckoutSubscriber implements EventSubscriberInterface
     private function getExistingDiscountFromCart(Cart $cart): ?array
     {
         foreach ($cart->getLineItems() as $lineItem) {
-            if ($lineItem->getType() === self::LOYALTY_DISCOUNT_LINE_ITEM_TYPE) {
+            if ($lineItem->getType() === PointsRedemptionService::LOYALTY_DISCOUNT_LINE_ITEM_TYPE) {
                 $payload = $lineItem->getPayload();
                 $price = $lineItem->getPrice();
                 return [

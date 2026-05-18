@@ -2,22 +2,16 @@
 
 namespace LoyaltyEngage\Service;
 
-use Shopware\Core\Checkout\Cart\Cart;
-use Shopware\Core\Checkout\Cart\CartBehavior;
 use Shopware\Core\Checkout\Cart\CartPersister;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
-use Shopware\Core\Checkout\Cart\LineItem\LineItemCollection;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Checkout\Promotion\PromotionEntity;
-use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
-use Shopware\Core\Framework\Validation\DataBag\RequestDataBag;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
-use Shopware\Core\System\SalesChannel\SalesChannelEntity;
 use Psr\Log\LoggerInterface;
 
 class LoyaltyCartService
@@ -46,11 +40,6 @@ class LoyaltyCartService
     private $promotionRepository;
 
     /**
-     * @var EntityRepository
-     */
-    private $promotionDiscountRepository;
-
-    /**
      * @var LoyaltyEngageApiService
      */
     private $loyaltyEngageApiService;
@@ -65,7 +54,6 @@ class LoyaltyCartService
      * @param CartPersister $cartPersister
      * @param EntityRepository $productRepository
      * @param EntityRepository $promotionRepository
-     * @param EntityRepository $promotionDiscountRepository
      * @param LoyaltyEngageApiService $loyaltyEngageApiService
      * @param LoggerInterface $logger
      */
@@ -74,7 +62,6 @@ class LoyaltyCartService
         CartPersister $cartPersister,
         EntityRepository $productRepository,
         EntityRepository $promotionRepository,
-        EntityRepository $promotionDiscountRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {
@@ -82,7 +69,6 @@ class LoyaltyCartService
         $this->cartPersister = $cartPersister;
         $this->productRepository = $productRepository;
         $this->promotionRepository = $promotionRepository;
-        $this->promotionDiscountRepository = $promotionDiscountRepository;
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->logger = $logger;
     }
@@ -167,8 +153,19 @@ class LoyaltyCartService
         }
 
         try {
-            // Notify loyalty API
-            $apiResponse = $this->loyaltyEngageApiService->removeItem($email, $productId, 1);
+            // Look up the product to get its SKU (productNumber) — the LoyaltyEngage API
+            // expects the SKU, not the Shopware internal UUID.
+            $criteria = new Criteria([$productId]);
+            $product = $this->productRepository->search($criteria, $context->getContext())->first();
+
+            if (!$product instanceof ProductEntity && !$product instanceof SalesChannelProductEntity) {
+                return $this->createErrorResponse('Product not found.');
+            }
+
+            $sku = $product->getProductNumber();
+
+            // Notify loyalty API using the SKU
+            $apiResponse = $this->loyaltyEngageApiService->removeItem($email, $sku, 1);
             if ($apiResponse !== self::HTTP_OK) {
                 return $this->createErrorResponse('Product could not be removed from loyalty system.');
             }
@@ -236,7 +233,10 @@ class LoyaltyCartService
     }
 
     /**
-     * Claim a discount after adding a product to the loyalty cart
+     * Claim a discount after adding a product to the loyalty cart.
+     *
+     * Note: addProduct() already calls the LoyaltyEngage addToCart API internally,
+     * so we do NOT call it separately here to avoid a double API call.
      */
     public function claimDiscountAfterAddToCart(string $email, string $productId, float $discount, SalesChannelContext $context): array
     {
@@ -245,10 +245,10 @@ class LoyaltyCartService
         }
 
         try {
-            // Step 1: Add to Loyalty Engage
-            $cartStatus = $this->loyaltyEngageApiService->addToCart($email, $productId);
-            if ($cartStatus !== self::HTTP_OK) {
-                return $this->createErrorResponse('Failed to add product to loyalty cart.');
+            // Step 1: Add product to Shopware cart (this also calls the LoyaltyEngage addToCart API)
+            $addResult = $this->addProduct($email, $productId, $context);
+            if (!$addResult['success']) {
+                return $addResult;
             }
 
             // Step 2: Claim discount
@@ -263,13 +263,7 @@ class LoyaltyCartService
             // Step 3: Ensure promotion exists
             $promotionId = $this->ensurePromotionExists($discountCode, $discountAmount, $context);
 
-            // Step 4: Add product to cart
-            $addResult = $this->addProduct($email, $productId, $context);
-            if (!$addResult['success']) {
-                return $addResult;
-            }
-
-            // Step 5: Apply promotion to cart
+            // Step 4: Apply promotion to cart
             $cart = $this->cartService->getCart($context->getToken(), $context);
             $cart->addExtension('loyaltyPromotion', new \Shopware\Core\Framework\Struct\ArrayStruct(['code' => $discountCode]));
             $this->cartPersister->save($cart, $context);

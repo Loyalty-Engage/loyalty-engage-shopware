@@ -94,8 +94,21 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
                     continue;
                 }
 
+                // Use productNumber (SKU) from payload — the LoyaltyEngage API expects the SKU,
+                // not the Shopware internal UUID.
+                $payload = $lineItem->getPayload() ?? [];
+                $sku = $payload['productNumber'] ?? null;
+
+                if (!$sku) {
+                    $this->logger->warning('LoyaltyEngage: Missing productNumber in line item payload in OrderPlaceTaskHandler', [
+                        'orderId' => $order->getId(),
+                        'lineItemId' => $lineItem->getId()
+                    ]);
+                    continue;
+                }
+
                 $products[] = [
-                    'sku' => $lineItem->getProductId(),
+                    'sku' => $sku,
                     'quantity' => (int) $lineItem->getQuantity()
                 ];
             }
