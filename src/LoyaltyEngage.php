@@ -40,6 +40,9 @@ class LoyaltyEngage extends Plugin
         // Add le_reserved_coins field if it doesn't exist yet (migration for existing installs)
         $this->addReservedCoinsFieldIfMissing($updateContext->getContext());
 
+        // Add retry tracking fields if they don't exist yet (migration for existing installs)
+        $this->addRetryTrackingFieldsIfMissing($updateContext->getContext());
+
         // Update custom field labels on plugin update
         $this->updateCustomFieldLabels($updateContext->getContext());
         $this->updateCustomFieldSetLabels($updateContext->getContext());
@@ -75,7 +78,7 @@ class LoyaltyEngage extends Plugin
     /**
      * Add le_reserved_coins field to existing customer custom field set if missing (migration)
      */
-    private function addReservedCoinsFieldIfMissing($context): void
+    private function addReservedCoinsFieldIfMissing(\Shopware\Core\Framework\Context $context): void
     {
         $customFieldRepository = $this->container->get('custom_field.repository');
         $customFieldSetRepository = $this->container->get('custom_field_set.repository');
@@ -115,6 +118,65 @@ class LoyaltyEngage extends Plugin
                 ],
             ],
         ], $context);
+    }
+
+    /**
+     * Add loyalty_purchase_sent, loyalty_purchase_retry_count fields to the order custom field set
+     * if they don't exist yet (migration for existing installs).
+     */
+    private function addRetryTrackingFieldsIfMissing(\Shopware\Core\Framework\Context $context): void
+    {
+        $customFieldRepository    = $this->container->get('custom_field.repository');
+        $customFieldSetRepository = $this->container->get('custom_field_set.repository');
+
+        // Find the order custom field set
+        $setCriteria = new Criteria();
+        $setCriteria->addFilter(new EqualsFilter('name', 'loyalty_engage_fields'));
+        $customFieldSets = $customFieldSetRepository->search($setCriteria, $context);
+
+        if ($customFieldSets->count() === 0) {
+            return; // Set doesn't exist yet, will be created on install
+        }
+
+        $customFieldSet = $customFieldSets->first();
+        $setId          = $customFieldSet->getId();
+
+        $newFields = [
+            [
+                'name'             => 'loyalty_purchase_sent',
+                'type'             => 'bool',
+                'customFieldSetId' => $setId,
+                'config'           => [
+                    'label' => [
+                        'en-GB' => 'Loyalty Purchase Event Sent',
+                        'de-DE' => 'Loyalty Kauf-Event gesendet',
+                    ],
+                    'customFieldPosition' => 3,
+                ],
+            ],
+            [
+                'name'             => 'loyalty_purchase_retry_count',
+                'type'             => 'int',
+                'customFieldSetId' => $setId,
+                'config'           => [
+                    'label' => [
+                        'en-GB' => 'Loyalty Purchase Retry Count',
+                        'de-DE' => 'Loyalty Kauf-Retry-Zähler',
+                    ],
+                    'customFieldPosition' => 4,
+                ],
+            ],
+        ];
+
+        foreach ($newFields as $fieldData) {
+            $criteria = new Criteria();
+            $criteria->addFilter(new EqualsFilter('name', $fieldData['name']));
+            $existing = $customFieldRepository->search($criteria, $context);
+
+            if ($existing->count() === 0) {
+                $customFieldRepository->create([$fieldData], $context);
+            }
+        }
     }
 
     /**
@@ -178,6 +240,28 @@ class LoyaltyEngage extends Plugin
                                 'de-DE' => 'Loyalty Bestellung Abrufzähler',
                             ],
                             'customFieldPosition' => 2,
+                        ],
+                    ],
+                    [
+                        'name' => 'loyalty_purchase_sent',
+                        'type' => 'bool',
+                        'config' => [
+                            'label' => [
+                                'en-GB' => 'Loyalty Purchase Event Sent',
+                                'de-DE' => 'Loyalty Kauf-Event gesendet',
+                            ],
+                            'customFieldPosition' => 3,
+                        ],
+                    ],
+                    [
+                        'name' => 'loyalty_purchase_retry_count',
+                        'type' => 'int',
+                        'config' => [
+                            'label' => [
+                                'en-GB' => 'Loyalty Purchase Retry Count',
+                                'de-DE' => 'Loyalty Kauf-Retry-Zähler',
+                            ],
+                            'customFieldPosition' => 4,
                         ],
                     ],
                 ],
@@ -291,7 +375,7 @@ class LoyaltyEngage extends Plugin
     /**
      * Update custom field labels for existing fields
      */
-    private function updateCustomFieldLabels($context): void
+    private function updateCustomFieldLabels(\Shopware\Core\Framework\Context $context): void
     {
         $customFieldRepository = $this->container->get('custom_field.repository');
 
@@ -329,6 +413,14 @@ class LoyaltyEngage extends Plugin
                 'en-GB' => 'Loyalty Order Retrieve Count',
                 'de-DE' => 'Loyalty Bestellung Abrufzähler',
             ],
+            'loyalty_purchase_sent' => [
+                'en-GB' => 'Loyalty Purchase Event Sent',
+                'de-DE' => 'Loyalty Kauf-Event gesendet',
+            ],
+            'loyalty_purchase_retry_count' => [
+                'en-GB' => 'Loyalty Purchase Retry Count',
+                'de-DE' => 'Loyalty Kauf-Retry-Zähler',
+            ],
         ];
 
         foreach ($fieldLabels as $fieldName => $labels) {
@@ -354,7 +446,7 @@ class LoyaltyEngage extends Plugin
     /**
      * Update custom field set labels for existing sets
      */
-    private function updateCustomFieldSetLabels($context): void
+    private function updateCustomFieldSetLabels(\Shopware\Core\Framework\Context $context): void
     {
         $customFieldSetRepository = $this->container->get('custom_field_set.repository');
 

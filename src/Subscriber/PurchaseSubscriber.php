@@ -28,15 +28,15 @@ class PurchaseSubscriber implements EventSubscriberInterface
         MessageBusInterface $messageBus
     ) {
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
-        $this->orderRepository = $orderRepository;
-        $this->logger = $logger;
-        $this->messageBus = $messageBus;
+        $this->orderRepository         = $orderRepository;
+        $this->logger                  = $logger;
+        $this->messageBus              = $messageBus;
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            StateMachineTransitionEvent::class => 'onOrderCompleted'
+            StateMachineTransitionEvent::class => 'onOrderCompleted',
         ];
     }
 
@@ -75,10 +75,10 @@ class PurchaseSubscriber implements EventSubscriberInterface
                 return;
             }
 
-            $email = $customer->getEmail();
+            $email       = $customer->getEmail();
             $orderNumber = $order->getOrderNumber();
-            $orderDate = $order->getOrderDateTime()?->format(DATE_ATOM) ?? '';
-            $products = [];
+            $orderDate   = $order->getOrderDateTime()?->format(DATE_ATOM) ?? '';
+            $products    = [];
 
             foreach ($order->getLineItems() as $lineItem) {
                 if ($lineItem->getType() !== 'product') {
@@ -87,8 +87,8 @@ class PurchaseSubscriber implements EventSubscriberInterface
 
                 if (!$lineItem->getProductId()) {
                     $this->logger->warning('LoyaltyEngage: Missing product ID on line item', [
-                        'orderId' => $orderId,
-                        'lineItemId' => $lineItem->getId()
+                        'orderId'    => $orderId,
+                        'lineItemId' => $lineItem->getId(),
                     ]);
                     continue;
                 }
@@ -96,20 +96,20 @@ class PurchaseSubscriber implements EventSubscriberInterface
                 // Use productNumber (SKU) from payload — the LoyaltyEngage API expects the SKU,
                 // not the Shopware internal UUID.
                 $payload = $lineItem->getPayload() ?? [];
-                $sku = $payload['productNumber'] ?? null;
+                $sku     = $payload['productNumber'] ?? null;
 
                 if (!$sku) {
                     $this->logger->warning('LoyaltyEngage: Missing productNumber in line item payload', [
-                        'orderId' => $orderId,
-                        'lineItemId' => $lineItem->getId()
+                        'orderId'    => $orderId,
+                        'lineItemId' => $lineItem->getId(),
                     ]);
                     continue;
                 }
 
                 $products[] = [
-                    'sku' => $sku,
-                    'price' => (float) $lineItem->getUnitPrice(),
-                    'quantity' => (int) $lineItem->getQuantity()
+                    'sku'      => $sku,
+                    'price'    => (float) $lineItem->getUnitPrice(),
+                    'quantity' => (int) $lineItem->getQuantity(),
                 ];
             }
 
@@ -118,17 +118,29 @@ class PurchaseSubscriber implements EventSubscriberInterface
                 return;
             }
 
+            // Mark the order as "not yet sent" so the scheduled retry task can pick it up
+            // if the queue message fails to deliver after all retries.
+            $customFields                          = $order->getCustomFields() ?? [];
+            $customFields['loyalty_purchase_sent'] = false;
+            if (!isset($customFields['loyalty_purchase_retry_count'])) {
+                $customFields['loyalty_purchase_retry_count'] = 0;
+            }
+
+            $this->orderRepository->update([
+                ['id' => $order->getId(), 'customFields' => $customFields],
+            ], $event->getContext());
+
             $message = new PurchaseMessage($email, $orderNumber, $orderDate, $products);
 
             $this->logger->info('LoyaltyEngage: Dispatching purchase message to queue', [
-                'orderId' => $orderNumber
+                'orderId' => $orderNumber,
             ]);
 
             $this->messageBus->dispatch($message);
 
         } catch (\Throwable $e) {
             $this->logger->error('LoyaltyEngage: Fatal error in onOrderCompleted()', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

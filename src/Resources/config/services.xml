@@ -100,6 +100,7 @@
         <service id="LoyaltyEngage\Message\Handler\PurchaseMessageHandler">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
+            <argument type="service" id="order.repository"/>
             <tag name="messenger.message_handler"/>
         </service>
 
@@ -201,6 +202,32 @@
         <service id="LoyaltyEngage\Scheduled\OrderPlaceTaskHandler">
             <argument type="service" id="scheduled_task.repository" />
             <argument type="service" id="order.repository" />
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
+            <argument type="service" id="logger" />
+            <tag name="messenger.message_handler"/>
+        </service>
+
+        <!-- Purchase Event Retry Task: retries failed purchase events every 5 minutes -->
+        <service id="LoyaltyEngage\Scheduled\PurchaseEventRetryTask">
+            <tag name="shopware.scheduled.task" />
+        </service>
+
+        <service id="LoyaltyEngage\Scheduled\PurchaseEventRetryTaskHandler">
+            <argument type="service" id="scheduled_task.repository" />
+            <argument type="service" id="order.repository" />
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
+            <argument type="service" id="logger" />
+            <tag name="messenger.message_handler"/>
+        </service>
+
+        <!-- Return Event Retry Task: retries failed return events every 5 minutes -->
+        <service id="LoyaltyEngage\Scheduled\ReturnEventRetryTask">
+            <tag name="shopware.scheduled.task" />
+        </service>
+
+        <service id="LoyaltyEngage\Scheduled\ReturnEventRetryTaskHandler">
+            <argument type="service" id="scheduled_task.repository" />
+            <argument type="service" id="order_delivery.repository" />
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
             <argument type="service" id="logger" />
             <tag name="messenger.message_handler"/>

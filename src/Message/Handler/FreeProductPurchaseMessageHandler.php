@@ -10,69 +10,55 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 class FreeProductPurchaseMessageHandler
 {
-    /**
-     * @var LoyaltyEngageApiService
-     */
-    private $loyaltyEngageApiService;
+    private LoyaltyEngageApiService $loyaltyEngageApiService;
+    private LoggerInterface $logger;
 
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    /**
-     * @param LoyaltyEngageApiService $loyaltyEngageApiService
-     * @param LoggerInterface $logger
-     */
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
     ) {
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
-        $this->logger = $logger;
+        $this->logger                  = $logger;
     }
 
-    /**
-     * @param FreeProductPurchaseMessage $message
-     */
     public function __invoke(FreeProductPurchaseMessage $message): void
     {
-        try {
-            $this->logger->info('Processing free product purchase message', [
-                'email'    => $message->getEmail(),
-                'orderId'  => $message->getOrderId(),
-                'products' => $message->getProducts(),
-            ]);
+        $this->logger->info('LoyaltyEngage: Processing free product purchase message', [
+            'email'    => $message->getEmail(),
+            'orderId'  => $message->getOrderId(),
+            'products' => $message->getProducts(),
+        ]);
 
-            $response = $this->loyaltyEngageApiService->placeOrderWithResponse(
-                $message->getEmail(),
-                $message->getOrderId(),
-                $message->getProducts()
-            );
+        $response   = $this->loyaltyEngageApiService->placeOrderWithResponse(
+            $message->getEmail(),
+            $message->getOrderId(),
+            $message->getProducts()
+        );
 
-            $statusCode  = $response['statusCode'] ?? null;
-            $body        = $response['body'] ?? null;
+        $statusCode = $response['statusCode'] ?? null;
+        $body       = $response['body'] ?? null;
 
-            if ($statusCode === 200) {
-                $this->logger->info('Free product purchase sent successfully', [
-                    'email'   => $message->getEmail(),
-                    'orderId' => $message->getOrderId(),
-                ]);
-            } else {
-                $this->logger->error('Failed to send free product purchase', [
-                    'email'      => $message->getEmail(),
-                    'orderId'    => $message->getOrderId(),
-                    'statusCode' => $statusCode,
-                    'body'       => $body,
-                ]);
-            }
-        } catch (\Throwable $e) {
-            $this->logger->error('Error processing free product purchase message', [
+        if ($statusCode === 200) {
+            $this->logger->info('LoyaltyEngage: Free product purchase sent successfully', [
                 'email'   => $message->getEmail(),
                 'orderId' => $message->getOrderId(),
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
             ]);
+        } else {
+            $this->logger->error('LoyaltyEngage: Failed to send free product purchase — will retry', [
+                'email'      => $message->getEmail(),
+                'orderId'    => $message->getOrderId(),
+                'statusCode' => $statusCode,
+                'body'       => $body,
+            ]);
+
+            // Throw exception so Symfony Messenger retries automatically (up to max_retries)
+            throw new \RuntimeException(
+                sprintf(
+                    'LoyaltyEngage free product purchase failed for order %s with HTTP status %s',
+                    $message->getOrderId(),
+                    $statusCode ?? 'null'
+                )
+            );
         }
     }
 }
