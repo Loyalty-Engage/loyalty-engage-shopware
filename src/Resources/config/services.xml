@@ -186,10 +186,11 @@
             <tag name="shopware.scheduled.task" />
         </service>
 
+        <!-- CartExpiryTaskHandler: run() is intentionally empty (disabled).
+             The original logic called removeAllItems() per order which caused
+             rate-limiting. Cart cleanup now happens only via FreeProductRemoveSubscriber. -->
         <service id="LoyaltyEngage\Scheduled\CartExpiryTaskHandler">
             <argument type="service" id="scheduled_task.repository" />
-            <argument type="service" id="order.repository" />
-            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
             <argument type="service" id="logger" />
             <tag name="messenger.message_handler"/>
         </service>
