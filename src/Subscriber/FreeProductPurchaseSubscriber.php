@@ -84,9 +84,12 @@ class FreeProductPurchaseSubscriber implements EventSubscriberInterface
                     continue;
                 }
 
+                // The LoyaltyEngage cart always adds products with quantity=1 per addToCart() call.
+                // Each loyalty line item in Shopware is a separate entry (stackable=false, randomHex ID),
+                // so we always send quantity=1 per line item to match what is in the loyalty cart.
                 $freeProducts[] = [
                     'sku'      => $sku,
-                    'quantity' => (int) $lineItem->getQuantity(),
+                    'quantity' => 1,
                 ];
             }
 
