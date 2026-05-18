@@ -183,16 +183,19 @@ class PurchaseSubscriber implements EventSubscriberInterface
                     $productDiscountCents = 0;
                 }
 
-                $subtotalCents         = (int) round($raw['subtotal'] * 100);
+                $subtotalCents          = (int) round($raw['subtotal'] * 100);
                 $effectiveSubtotalCents = max(0, $subtotalCents - $productDiscountCents);
-                $effectiveUnitPrice     = $raw['quantity'] > 0
-                    ? round($effectiveSubtotalCents / $raw['quantity'] / 100, 2)
-                    : 0.0;
+
+                // Send price as the effective subtotal and quantity=1.
+                // This avoids rounding loss when effectiveSubtotal is not
+                // evenly divisible by quantity (e.g. €80 / 6 = €13.333...).
+                // The API receives the exact amount to reward.
+                $effectiveSubtotal = round($effectiveSubtotalCents / 100, 2);
 
                 $products[] = [
                     'sku'      => $raw['sku'],
-                    'price'    => $effectiveUnitPrice,
-                    'quantity' => $raw['quantity'],
+                    'price'    => $effectiveSubtotal,
+                    'quantity' => 1,
                 ];
             }
 
