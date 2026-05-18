@@ -153,34 +153,40 @@ class PurchaseSubscriber implements EventSubscriberInterface
             // Step 2: Distribute the total discount proportionally across
             //         products based on each product's share of the subtotal.
             //
-            // Formula per product:
-            //   discountShare     = productSubtotal / productTotal
-            //   discountAmount    = totalDiscount × discountShare
-            //   effectiveSubtotal = productSubtotal - discountAmount
-            //   effectiveUnitPrice = effectiveSubtotal / quantity   (rounded to 2 dp)
+            // Strategy: work in cents (integers) to avoid floating-point drift.
             //
-            // To avoid floating-point drift we track the remaining discount and
-            // assign any leftover to the last product.
+            //   discountCents     = round(totalDiscount × 100)
+            //   For each product (except the last):
+            //     share           = productSubtotal / productTotal
+            //     productDiscount = floor(discountCents × share)   ← always round down
+            //     remainingCents -= productDiscount
+            //   Last product gets all remainingCents (absorbs rounding remainder)
+            //
+            //   effectiveSubtotalCents = productSubtotalCents - productDiscountCents
+            //   effectiveUnitPrice     = effectiveSubtotalCents / quantity / 100
+            //                           (rounded to 2 dp)
             // ----------------------------------------------------------------
             $products          = [];
-            $remainingDiscount = $totalDiscount;
+            $discountCents     = (int) round($totalDiscount * 100);
+            $remainingCents    = $discountCents;
             $lastIndex         = count($rawProducts) - 1;
 
             foreach ($rawProducts as $i => $raw) {
                 if ($i === $lastIndex) {
-                    // Assign all remaining discount to the last product to avoid rounding gaps
-                    $discountForProduct = $remainingDiscount;
+                    // Last product absorbs any remaining cents from rounding
+                    $productDiscountCents = $remainingCents;
                 } elseif ($productTotal > 0.0) {
-                    $share              = $raw['subtotal'] / $productTotal;
-                    $discountForProduct = round($totalDiscount * $share, 2);
-                    $remainingDiscount -= $discountForProduct;
+                    $share                = $raw['subtotal'] / $productTotal;
+                    $productDiscountCents = (int) floor($discountCents * $share);
+                    $remainingCents      -= $productDiscountCents;
                 } else {
-                    $discountForProduct = 0.0;
+                    $productDiscountCents = 0;
                 }
 
-                $effectiveSubtotal  = max(0.0, $raw['subtotal'] - $discountForProduct);
-                $effectiveUnitPrice = $raw['quantity'] > 0
-                    ? round($effectiveSubtotal / $raw['quantity'], 2)
+                $subtotalCents         = (int) round($raw['subtotal'] * 100);
+                $effectiveSubtotalCents = max(0, $subtotalCents - $productDiscountCents);
+                $effectiveUnitPrice     = $raw['quantity'] > 0
+                    ? round($effectiveSubtotalCents / $raw['quantity'] / 100, 2)
                     : 0.0;
 
                 $products[] = [
