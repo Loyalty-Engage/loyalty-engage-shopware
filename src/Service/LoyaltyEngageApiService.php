@@ -13,6 +13,7 @@ class LoyaltyEngageApiService
     private const HTTP_OK = 200;
     private const DEFAULT_API_URL = 'https://app.loyaltyengage.tech';
     private const REQUIRED_API_BASE = 'https://app.loyaltyengage.tech';
+    private const SRS_BRIDGE_URL = 'https://dev.bridge.loyaltyengage.tech';
 
     /**
      * @var SystemConfigService
@@ -124,9 +125,8 @@ class LoyaltyEngageApiService
             return [];
         }
 
-        // SRS API uses the same base URL but a different path
-        $apiUrl = rtrim((string) $this->getApiUrl(), '/');
-        $url    = $apiUrl . '/api/srs/v1/voucher-status';
+        // SRS API uses a dedicated bridge URL, not the main loyalty API URL
+        $url = self::SRS_BRIDGE_URL . '/api/srs/v1/voucher-status';
 
         $payload = [
             'tenant'  => $tenantId,
