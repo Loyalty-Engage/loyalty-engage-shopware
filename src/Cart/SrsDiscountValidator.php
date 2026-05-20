@@ -54,8 +54,26 @@ class SrsDiscountValidator implements CartValidatorInterface
                 continue;
             }
 
-            $promotionCode = $lineItem->getReferencedId();
-            if ($promotionCode === null || $promotionCode === '') {
+            // In the cart, the promotion code is stored in the line item payload under 'code'.
+            // getReferencedId() returns the promotion UUID, not the code string.
+            $payload       = $lineItem->getPayload() ?? [];
+            $promotionCode = $payload['code'] ?? null;
+
+            // Fallback: some Shopware versions store it under 'promotionCode'
+            if (empty($promotionCode)) {
+                $promotionCode = $payload['promotionCode'] ?? null;
+            }
+
+            // Last fallback: try getReferencedId() in case it is the code
+            if (empty($promotionCode)) {
+                $promotionCode = $lineItem->getReferencedId();
+            }
+
+            if (empty($promotionCode)) {
+                $this->logger->debug('SrsDiscountValidator: No promotion code found in line item', [
+                    'lineItemId' => $lineItem->getId(),
+                    'payload'    => $payload,
+                ]);
                 continue;
             }
 
@@ -69,10 +87,13 @@ class SrsDiscountValidator implements CartValidatorInterface
             $codeEntity   = $searchResult->first();
 
             if ($codeEntity === null) {
+                $this->logger->debug('SrsDiscountValidator: Code not found in promotion_individual_code', [
+                    'code' => $promotionCode,
+                ]);
                 continue;
             }
 
-            // Resolve promotion name
+            // Resolve promotion name via the loaded association
             $promotionName = '';
             $vars          = $codeEntity->getVars();
             $promotion     = $vars['promotion'] ?? null;
@@ -81,6 +102,11 @@ class SrsDiscountValidator implements CartValidatorInterface
             } elseif ($promotion !== null && is_array($promotion)) {
                 $promotionName = (string) ($promotion['name'] ?? '');
             }
+
+            $this->logger->info('SrsDiscountValidator: Found promotion code in cart', [
+                'code'          => $promotionCode,
+                'promotionName' => $promotionName,
+            ]);
 
             if (!str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
                 continue;
@@ -99,6 +125,12 @@ class SrsDiscountValidator implements CartValidatorInterface
 
             $checkSuccess = $srsResult['srs_check_success'] ?? false;
             $srsStatus    = $srsResult['srs_status'] ?? null;
+
+            $this->logger->info('SrsDiscountValidator: SRS voucher status result', [
+                'code'         => $promotionCode,
+                'checkSuccess' => $checkSuccess,
+                'srsStatus'    => $srsStatus,
+            ]);
 
             // srs_status === 0 means already redeemed
             if ($checkSuccess === true && $srsStatus === 0) {
