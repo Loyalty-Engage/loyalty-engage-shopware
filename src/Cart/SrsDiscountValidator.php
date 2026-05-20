@@ -52,8 +52,12 @@ class SrsDiscountValidator implements CartValidatorInterface
 
     public function validate(Cart $cart, ErrorCollection $errors, SalesChannelContext $context): void
     {
+        // DEBUG: write directly to file to confirm validator is called
+        file_put_contents('/var/www/html/var/log/srs_debug.log', date('Y-m-d H:i:s') . " validate() called\n", FILE_APPEND);
+
         // Only run when SRS Discount Sync is enabled
         if (!$this->loyaltyEngageApiService->isSrsDiscountSyncEnabled()) {
+            file_put_contents('/var/www/html/var/log/srs_debug.log', date('Y-m-d H:i:s') . " SRS disabled, returning\n", FILE_APPEND);
             return;
         }
 

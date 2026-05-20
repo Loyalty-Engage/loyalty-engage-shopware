@@ -168,6 +168,15 @@
             <tag name="kernel.event_subscriber"/>
         </service>
 
+        <!-- SRS Discount Added Subscriber: validates LoyaltyEngage codes against SRS API when added to cart -->
+        <service id="LoyaltyEngage\Subscriber\SrsDiscountAddedSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="promotion_individual_code.repository"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="logger"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
         <!-- Checkout Subscriber for Points Redemption Block -->
         <service id="LoyaltyEngage\Subscriber\CheckoutSubscriber">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
