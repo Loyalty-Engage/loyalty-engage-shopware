@@ -18,8 +18,13 @@ use Shopware\Core\System\SalesChannel\SalesChannelContext;
  *
  * Only active when "SRS Discount Sync" is enabled in the plugin config.
  * For each LoyaltyEngage promotion code in the cart, the SRS API is called
- * to check whether the voucher has already been redeemed (srs_status === 0).
- * If so, a cart error is added and the checkout is blocked.
+ * to check whether the voucher has already been redeemed or is expired.
+ *
+ * Blocked when:
+ *   - srs_status_label === "redeemed"  (already used)
+ *   - srs_status_label === "expired"   (past valid_to date)
+ *   - local_redeemed === true          (redeemed in LoyaltyEngage system)
+ *   - local_expired === true           (expired in LoyaltyEngage system)
  *
  * Fail-open: if the SRS API call fails (timeout, network error), the code
  * is allowed through to avoid blocking legitimate customers.
@@ -27,6 +32,9 @@ use Shopware\Core\System\SalesChannel\SalesChannelContext;
 class SrsDiscountValidator implements CartValidatorInterface
 {
     private const PROMOTION_NAME_PREFIX = 'LoyaltyEngage: ';
+
+    /** SRS status labels that should block checkout */
+    private const BLOCKED_STATUS_LABELS = ['redeemed', 'expired'];
 
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private EntityRepository $promotionIndividualCodeRepository;
@@ -70,7 +78,7 @@ class SrsDiscountValidator implements CartValidatorInterface
             }
 
             if (empty($promotionCode)) {
-                $this->logger->debug('SrsDiscountValidator: No promotion code found in line item', [
+                $this->logger->warning('SrsDiscountValidator: No promotion code found in line item', [
                     'lineItemId' => $lineItem->getId(),
                     'payload'    => $payload,
                 ]);
@@ -87,7 +95,7 @@ class SrsDiscountValidator implements CartValidatorInterface
             $codeEntity   = $searchResult->first();
 
             if ($codeEntity === null) {
-                $this->logger->debug('SrsDiscountValidator: Code not found in promotion_individual_code', [
+                $this->logger->warning('SrsDiscountValidator: Code not found in promotion_individual_code', [
                     'code' => $promotionCode,
                 ]);
                 continue;
@@ -95,20 +103,32 @@ class SrsDiscountValidator implements CartValidatorInterface
 
             // Resolve promotion name via the loaded association
             $promotionName = '';
-            $vars          = $codeEntity->getVars();
-            $promotion     = $vars['promotion'] ?? null;
-            if ($promotion !== null && method_exists($promotion, 'getName')) {
-                $promotionName = (string) $promotion->getName();
-            } elseif ($promotion !== null && is_array($promotion)) {
-                $promotionName = (string) ($promotion['name'] ?? '');
+            try {
+                $promotion = $codeEntity->get('promotion');
+                if ($promotion !== null && method_exists($promotion, 'getName')) {
+                    $promotionName = (string) $promotion->getName();
+                }
+            } catch (\Throwable $e) {
+                // Fallback: try getVars
+                $vars      = $codeEntity->getVars();
+                $promotion = $vars['promotion'] ?? null;
+                if (is_array($promotion)) {
+                    $promotionName = (string) ($promotion['name'] ?? '');
+                } elseif ($promotion !== null && method_exists($promotion, 'getName')) {
+                    $promotionName = (string) $promotion->getName();
+                }
             }
 
-            $this->logger->info('SrsDiscountValidator: Found promotion code in cart', [
+            $this->logger->warning('SrsDiscountValidator: Found promotion code in cart', [
                 'code'          => $promotionCode,
                 'promotionName' => $promotionName,
             ]);
 
             if (!str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
+                $this->logger->warning('SrsDiscountValidator: Skipping non-LoyaltyEngage promotion', [
+                    'code'          => $promotionCode,
+                    'promotionName' => $promotionName,
+                ]);
                 continue;
             }
 
@@ -117,24 +137,48 @@ class SrsDiscountValidator implements CartValidatorInterface
 
             if (empty($srsResult)) {
                 // API call failed — fail open, allow the code through
-                $this->logger->warning('SrsDiscountValidator: SRS API call failed, allowing code through', [
+                $this->logger->warning('SrsDiscountValidator: SRS API call failed or returned empty, allowing code through', [
                     'code' => $promotionCode,
                 ]);
                 continue;
             }
 
-            $checkSuccess = $srsResult['srs_check_success'] ?? false;
-            $srsStatus    = $srsResult['srs_status'] ?? null;
+            $checkSuccess   = $srsResult['srs_check_success'] ?? false;
+            $srsStatus      = $srsResult['srs_status'] ?? null;
+            $srsStatusLabel = $srsResult['srs_status_label'] ?? null;
+            $localRedeemed  = $srsResult['local_redeemed'] ?? false;
+            $localExpired   = $srsResult['local_expired'] ?? false;
 
-            $this->logger->info('SrsDiscountValidator: SRS voucher status result', [
-                'code'         => $promotionCode,
-                'checkSuccess' => $checkSuccess,
-                'srsStatus'    => $srsStatus,
+            $this->logger->warning('SrsDiscountValidator: SRS voucher status result', [
+                'code'           => $promotionCode,
+                'checkSuccess'   => $checkSuccess,
+                'srsStatus'      => $srsStatus,
+                'srsStatusLabel' => $srsStatusLabel,
+                'localRedeemed'  => $localRedeemed,
+                'localExpired'   => $localExpired,
             ]);
 
-            // srs_status === 0 means already redeemed
-            if ($checkSuccess === true && $srsStatus === 0) {
-                $this->logger->info('SrsDiscountValidator: Code already redeemed via SRS, blocking checkout', [
+            // Block if voucher is expired
+            if ($checkSuccess === true && $srsStatusLabel === 'expired') {
+                $this->logger->warning('SrsDiscountValidator: Code is expired via SRS, blocking checkout', [
+                    'code'      => $promotionCode,
+                    'srsResult' => $srsResult,
+                ]);
+
+                $errors->add(new GenericCartError(
+                    md5('srs-expired-' . $promotionCode),
+                    'Deze kortingscode is verlopen.',
+                    [],
+                    GenericCartError::LEVEL_ERROR,
+                    false,
+                    true
+                ));
+                continue;
+            }
+
+            // Block if voucher is already redeemed
+            if ($checkSuccess === true && $srsStatusLabel === 'redeemed') {
+                $this->logger->warning('SrsDiscountValidator: Code already redeemed via SRS, blocking checkout', [
                     'code'      => $promotionCode,
                     'srsResult' => $srsResult,
                 ]);
@@ -142,6 +186,26 @@ class SrsDiscountValidator implements CartValidatorInterface
                 $errors->add(new GenericCartError(
                     md5('srs-redeemed-' . $promotionCode),
                     'Deze kortingscode is al gebruikt.',
+                    [],
+                    GenericCartError::LEVEL_ERROR,
+                    false,
+                    true
+                ));
+                continue;
+            }
+
+            // Block if locally redeemed or expired
+            if ($localRedeemed === true || $localExpired === true) {
+                $reason = $localExpired ? 'verlopen' : 'al gebruikt';
+                $this->logger->warning('SrsDiscountValidator: Code is locally redeemed/expired, blocking checkout', [
+                    'code'         => $promotionCode,
+                    'localRedeemed' => $localRedeemed,
+                    'localExpired'  => $localExpired,
+                ]);
+
+                $errors->add(new GenericCartError(
+                    md5('srs-local-' . $promotionCode),
+                    'Deze kortingscode is ' . $reason . '.',
                     [],
                     GenericCartError::LEVEL_ERROR,
                     false,
