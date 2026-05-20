@@ -70,6 +70,14 @@
             <argument type="service" id="logger"/>
         </service>
 
+        <!-- SRS Discount Validator: checks LoyaltyEngage codes against SRS API before checkout -->
+        <service id="LoyaltyEngage\Cart\SrsDiscountValidator">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="promotion_individual_code.repository"/>
+            <argument type="service" id="logger"/>
+            <tag name="shopware.cart.validator"/>
+        </service>
+
         <!-- Loyalty Discount Cart Collector/Processor -->
         <service id="LoyaltyEngage\Cart\LoyaltyDiscountCollector">
             <argument type="service" id="Shopware\Core\Checkout\Cart\Price\AbsolutePriceCalculator"/>

@@ -83,6 +83,21 @@
     </card>
 
     <card>
+        <title>SRS Discount Sync</title>
+        <input-field type="bool">
+            <name>srsDiscountSyncEnabled</name>
+            <label>Enable SRS Discount Sync</label>
+            <helpText>When enabled, LoyaltyEngage discount codes are validated against the SRS API before being applied. If a code has already been redeemed, it will be rejected at checkout.</helpText>
+            <defaultValue>false</defaultValue>
+        </input-field>
+        <input-field type="text">
+            <name>srsTenantId</name>
+            <label>SRS Tenant ID</label>
+            <helpText>The tenant ID used for SRS voucher status checks (e.g. "105").</helpText>
+        </input-field>
+    </card>
+
+    <card>
         <title>Loyalty Export Settings</title>
         <input-field type="bool">
             <name>returnEvent</name>

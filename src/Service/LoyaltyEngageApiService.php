@@ -93,6 +93,93 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Check if SRS Discount Sync is enabled
+     */
+    public function isSrsDiscountSyncEnabled(): bool
+    {
+        return (bool) $this->systemConfigService->get('LoyaltyEngage.config.srsDiscountSyncEnabled');
+    }
+
+    /**
+     * Get SRS Tenant ID from config
+     */
+    public function getSrsTenantId(): ?string
+    {
+        return $this->systemConfigService->get('LoyaltyEngage.config.srsTenantId');
+    }
+
+    /**
+     * Check voucher status via SRS API.
+     *
+     * Returns the decoded response array on success, or an empty array on failure.
+     * The caller should check srs_check_success === true && srs_status === 0 for "already redeemed".
+     */
+    public function checkSrsVoucherStatus(string $barcode): array
+    {
+        $tenantId = $this->getSrsTenantId();
+        if (!$tenantId) {
+            $this->logger->warning('LoyaltyEngage: SRS Tenant ID not configured, skipping voucher check', [
+                'barcode' => $barcode,
+            ]);
+            return [];
+        }
+
+        // SRS API uses the same base URL but a different path
+        $apiUrl = rtrim((string) $this->getApiUrl(), '/');
+        $url    = $apiUrl . '/api/srs/v1/voucher-status';
+
+        $payload = [
+            'tenant'  => $tenantId,
+            'barcode' => $barcode,
+        ];
+
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: SRS voucher status check', [
+                'url'     => $url,
+                'barcode' => $barcode,
+                'tenant'  => $tenantId,
+            ]);
+        }
+
+        try {
+            $response   = $this->httpClient->request('POST', $url, [
+                'headers' => $this->getDefaultHeaders(),
+                'json'    => $payload,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $content    = $response->getContent(false);
+            $decoded    = json_decode($content, true);
+
+            if ($this->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage: SRS voucher status response', [
+                    'barcode'    => $barcode,
+                    'statusCode' => $statusCode,
+                    'response'   => $decoded,
+                ]);
+            }
+
+            if ($statusCode === self::HTTP_OK && is_array($decoded)) {
+                return $decoded;
+            }
+
+            $this->logger->warning('LoyaltyEngage: SRS voucher status unexpected response', [
+                'barcode'    => $barcode,
+                'statusCode' => $statusCode,
+                'response'   => $content,
+            ]);
+
+            return [];
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage: SRS voucher status request failed', [
+                'barcode' => $barcode,
+                'error'   => $e->getMessage(),
+            ]);
+            return [];
+        }
+    }
+
+    /**
      * Check if Return Export is enabled
      */
     public function isReturnExportEnabled(): bool
