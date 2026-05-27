@@ -33,9 +33,6 @@ class SrsDiscountValidator implements CartValidatorInterface
 {
     private const PROMOTION_NAME_PREFIX = 'LoyaltyEngage: ';
 
-    /** SRS status labels that should block checkout */
-    private const BLOCKED_STATUS_LABELS = ['redeemed', 'expired'];
-
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private EntityRepository $promotionIndividualCodeRepository;
     private LoggerInterface $logger;
@@ -52,12 +49,8 @@ class SrsDiscountValidator implements CartValidatorInterface
 
     public function validate(Cart $cart, ErrorCollection $errors, SalesChannelContext $context): void
     {
-        // DEBUG: write directly to file to confirm validator is called
-        file_put_contents('/var/www/html/var/log/srs_debug.log', date('Y-m-d H:i:s') . " validate() called\n", FILE_APPEND);
-
         // Only run when SRS Discount Sync is enabled
         if (!$this->loyaltyEngageApiService->isSrsDiscountSyncEnabled()) {
-            file_put_contents('/var/www/html/var/log/srs_debug.log', date('Y-m-d H:i:s') . " SRS disabled, returning\n", FILE_APPEND);
             return;
         }
 
@@ -147,69 +140,24 @@ class SrsDiscountValidator implements CartValidatorInterface
                 continue;
             }
 
-            $checkSuccess   = $srsResult['srs_check_success'] ?? false;
-            $srsStatus      = $srsResult['srs_status'] ?? null;
-            $srsStatusLabel = $srsResult['srs_status_label'] ?? null;
-            $localRedeemed  = $srsResult['local_redeemed'] ?? false;
-            $localExpired   = $srsResult['local_expired'] ?? false;
+            $blockReason    = $this->loyaltyEngageApiService->getVoucherBlockState($promotionCode);
 
             $this->logger->warning('SrsDiscountValidator: SRS voucher status result', [
-                'code'           => $promotionCode,
-                'checkSuccess'   => $checkSuccess,
-                'srsStatus'      => $srsStatus,
-                'srsStatusLabel' => $srsStatusLabel,
-                'localRedeemed'  => $localRedeemed,
-                'localExpired'   => $localExpired,
+                'code'        => $promotionCode,
+                'blockReason' => $blockReason,
+                'srsResult'   => $srsResult,
             ]);
 
-            // Block if voucher is expired
-            if ($checkSuccess === true && $srsStatusLabel === 'expired') {
-                $this->logger->warning('SrsDiscountValidator: Code is expired via SRS, blocking checkout', [
-                    'code'      => $promotionCode,
-                    'srsResult' => $srsResult,
+            if ($blockReason !== null) {
+                $this->logger->warning('SrsDiscountValidator: Code is blocked, preventing checkout', [
+                    'code'       => $promotionCode,
+                    'reason'     => $blockReason,
+                    'srsResult'  => $srsResult,
                 ]);
 
                 $errors->add(new GenericCartError(
-                    md5('srs-expired-' . $promotionCode),
-                    'Deze kortingscode is verlopen.',
-                    [],
-                    GenericCartError::LEVEL_ERROR,
-                    false,
-                    true
-                ));
-                continue;
-            }
-
-            // Block if voucher is already redeemed
-            if ($checkSuccess === true && $srsStatusLabel === 'redeemed') {
-                $this->logger->warning('SrsDiscountValidator: Code already redeemed via SRS, blocking checkout', [
-                    'code'      => $promotionCode,
-                    'srsResult' => $srsResult,
-                ]);
-
-                $errors->add(new GenericCartError(
-                    md5('srs-redeemed-' . $promotionCode),
-                    'Deze kortingscode is al gebruikt.',
-                    [],
-                    GenericCartError::LEVEL_ERROR,
-                    false,
-                    true
-                ));
-                continue;
-            }
-
-            // Block if locally redeemed or expired
-            if ($localRedeemed === true || $localExpired === true) {
-                $reason = $localExpired ? 'verlopen' : 'al gebruikt';
-                $this->logger->warning('SrsDiscountValidator: Code is locally redeemed/expired, blocking checkout', [
-                    'code'         => $promotionCode,
-                    'localRedeemed' => $localRedeemed,
-                    'localExpired'  => $localExpired,
-                ]);
-
-                $errors->add(new GenericCartError(
-                    md5('srs-local-' . $promotionCode),
-                    'Deze kortingscode is ' . $reason . '.',
+                    md5('srs-blocked-' . $promotionCode),
+                    'Deze kortingscode is ' . $blockReason . '.',
                     [],
                     GenericCartError::LEVEL_ERROR,
                     false,

@@ -180,6 +180,45 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Returns the block reason for a voucher code, or null when the code may be used.
+     *
+     * Known return values:
+     *  - "verlopen"
+     *  - "al gebruikt"
+     *  - null
+     */
+    public function getVoucherBlockState(string $barcode): ?string
+    {
+        $srsResult = $this->checkSrsVoucherStatus($barcode);
+        if (empty($srsResult)) {
+            return null;
+        }
+
+        $checkSuccess   = $srsResult['srs_check_success'] ?? false;
+        $srsStatusLabel = $srsResult['srs_status_label'] ?? null;
+        $localRedeemed  = $srsResult['local_redeemed'] ?? false;
+        $localExpired   = $srsResult['local_expired'] ?? false;
+
+        if ($checkSuccess === true && $srsStatusLabel === 'expired') {
+            return 'verlopen';
+        }
+
+        if ($checkSuccess === true && $srsStatusLabel === 'redeemed') {
+            return 'al gebruikt';
+        }
+
+        if ($localExpired === true) {
+            return 'verlopen';
+        }
+
+        if ($localRedeemed === true) {
+            return 'al gebruikt';
+        }
+
+        return null;
+    }
+
+    /**
      * Check if Return Export is enabled
      */
     public function isReturnExportEnabled(): bool
