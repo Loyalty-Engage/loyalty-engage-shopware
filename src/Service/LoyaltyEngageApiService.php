@@ -144,6 +144,16 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Check if enough SRS redeem configuration is present to call the bridge.
+     */
+    public function canRedeemSrsVoucher(): bool
+    {
+        return !empty($this->getSrsTenantId())
+            && !empty($this->getSrsPlatformKey())
+            && !empty($this->getSrsBranchId());
+    }
+
+    /**
      * Check voucher status via SRS API.
      *
      * Returns the decoded response array on success, or an empty array on failure.
