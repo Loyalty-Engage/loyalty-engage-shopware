@@ -74,6 +74,7 @@
         <service id="LoyaltyEngage\Cart\SrsDiscountValidator">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="promotion_individual_code.repository"/>
+            <argument type="service" id="promotion.repository"/>
             <argument type="service" id="logger"/>
             <tag name="shopware.cart.validator"/>
         </service>
@@ -172,6 +173,7 @@
         <service id="LoyaltyEngage\Subscriber\SrsDiscountAddedSubscriber">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="promotion_individual_code.repository"/>
+            <argument type="service" id="promotion.repository"/>
             <argument type="service" id="logger"/>
             <tag name="kernel.event_subscriber"/>
         </service>

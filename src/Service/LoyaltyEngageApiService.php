@@ -110,6 +110,40 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Get SRS Client ID from config.
+     * Falls back to the main client ID when no dedicated SRS credential is set.
+     */
+    public function getSrsClientId(): ?string
+    {
+        return $this->systemConfigService->get('LoyaltyEngage.config.srsClientId') ?: $this->getTenantId();
+    }
+
+    /**
+     * Get SRS Client Secret from config.
+     * Falls back to the main client secret when no dedicated SRS credential is set.
+     */
+    public function getSrsClientSecret(): ?string
+    {
+        return $this->systemConfigService->get('LoyaltyEngage.config.srsClientSecret') ?: $this->getBearerToken();
+    }
+
+    /**
+     * Get SRS platform key from config.
+     */
+    public function getSrsPlatformKey(): ?string
+    {
+        return $this->systemConfigService->get('LoyaltyEngage.config.srsPlatformKey');
+    }
+
+    /**
+     * Get SRS branch/filiaal ID from config.
+     */
+    public function getSrsBranchId(): ?string
+    {
+        return $this->systemConfigService->get('LoyaltyEngage.config.srsBranchId') ?: '1';
+    }
+
+    /**
      * Check voucher status via SRS API.
      *
      * Returns the decoded response array on success, or an empty array on failure.
@@ -143,7 +177,7 @@ class LoyaltyEngageApiService
 
         try {
             $response   = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getSrsHeaders(),
                 'json'    => $payload,
             ]);
 
@@ -180,6 +214,74 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Mark a voucher as redeemed in the SRS bridge.
+     */
+    public function redeemSrsVoucher(string $barcode): bool
+    {
+        $tenantId = $this->getSrsTenantId();
+        $platformKey = $this->getSrsPlatformKey();
+        $branchId = $this->getSrsBranchId();
+
+        if (!$tenantId || !$platformKey || !$branchId) {
+            $this->logger->warning('LoyaltyEngage: SRS redeem skipped due to missing configuration', [
+                'barcode'     => $barcode,
+                'hasTenantId' => !empty($tenantId),
+                'hasPlatformKey' => !empty($platformKey),
+                'hasBranchId' => !empty($branchId),
+            ]);
+
+            return false;
+        }
+
+        $url = self::SRS_BRIDGE_URL . '/api/srs/v1/redeem-voucher';
+        $payload = [
+            'tenant'     => (string) $tenantId,
+            'barcode'    => $barcode,
+            'filiaal_id' => (string) $branchId,
+        ];
+
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: SRS redeem voucher request', [
+                'url'        => $url,
+                'barcode'    => $barcode,
+                'tenant'     => $tenantId,
+                'filiaal_id' => $branchId,
+            ]);
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => [
+                    'Content-Type'   => 'application/json',
+                    'X-PLATFORM-KEY' => $platformKey,
+                ],
+                'json' => $payload,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $content = $response->getContent(false);
+            $decoded = json_decode($content, true);
+
+            if ($this->getLoggerStatus()) {
+                $this->logger->info('LoyaltyEngage: SRS redeem voucher response', [
+                    'barcode'     => $barcode,
+                    'statusCode'  => $statusCode,
+                    'response'    => $decoded,
+                ]);
+            }
+
+            return $statusCode === self::HTTP_OK || $statusCode === 204;
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage: SRS redeem voucher request failed', [
+                'barcode' => $barcode,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
      * Returns the block reason for a voucher code, or null when the code may be used.
      *
      * Known return values:
@@ -190,8 +292,19 @@ class LoyaltyEngageApiService
     public function getVoucherBlockState(string $barcode): ?string
     {
         $srsResult = $this->checkSrsVoucherStatus($barcode);
+        return $this->getVoucherBlockStateFromSrsResult($srsResult);
+    }
+
+    /**
+     * Resolve the block reason from an SRS result payload.
+     *
+     * When SRS sync is enabled, we fail closed: if the bridge does not return
+     * a usable payload, the voucher is blocked instead of being allowed through.
+     */
+    public function getVoucherBlockStateFromSrsResult(array $srsResult): ?string
+    {
         if (empty($srsResult)) {
-            return null;
+            return 'momenteel niet te valideren';
         }
 
         $checkSuccess   = $srsResult['srs_check_success'] ?? false;
@@ -213,6 +326,10 @@ class LoyaltyEngageApiService
 
         if ($localRedeemed === true) {
             return 'al gebruikt';
+        }
+
+        if ($checkSuccess !== true) {
+            return 'momenteel niet te valideren';
         }
 
         return null;
@@ -324,6 +441,17 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Generate Basic Auth string for the SRS bridge.
+     */
+    private function getSrsBasicAuth(): string
+    {
+        $clientId = $this->getSrsClientId();
+        $clientSecret = $this->getSrsClientSecret();
+
+        return base64_encode($clientId . ':' . $clientSecret);
+    }
+
+    /**
      * Get default HTTP headers for API requests
      */
     private function getDefaultHeaders(): array
@@ -332,6 +460,26 @@ class LoyaltyEngageApiService
             'Content-Type' => 'application/json',
             'Authorization' => 'Basic ' . $this->getBasicAuth(),
         ];
+    }
+
+    /**
+     * Get default HTTP headers for SRS bridge requests.
+     */
+    private function getSrsHeaders(): array
+    {
+        $headers = [
+            'Content-Type' => 'application/json',
+        ];
+
+        $platformKey = $this->getSrsPlatformKey();
+        if (!empty($platformKey)) {
+            $headers['X-PLATFORM-KEY'] = $platformKey;
+        }
+
+        // Keep Basic Auth as fallback/compatibility for bridge setups that still expect it.
+        $headers['Authorization'] = 'Basic ' . $this->getSrsBasicAuth();
+
+        return $headers;
     }
 
     /**

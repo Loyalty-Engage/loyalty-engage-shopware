@@ -95,6 +95,27 @@
             <label>SRS Tenant ID</label>
             <helpText>The tenant ID used for SRS voucher status checks (e.g. "105").</helpText>
         </input-field>
+        <input-field type="password">
+            <name>srsClientId</name>
+            <label>SRS Client ID</label>
+            <helpText>Optional dedicated Basic Auth username/client ID for the Dev Bridge SRS endpoint. Falls back to the main Client ID when left empty.</helpText>
+        </input-field>
+        <input-field type="password">
+            <name>srsClientSecret</name>
+            <label>SRS Client Secret</label>
+            <helpText>Optional dedicated Basic Auth password/client secret for the Dev Bridge SRS endpoint. Falls back to the main Client Secret when left empty.</helpText>
+        </input-field>
+        <input-field type="password">
+            <name>srsPlatformKey</name>
+            <label>SRS Platform Key</label>
+            <helpText>Platform key for the Dev Bridge redeem-voucher endpoint (X-PLATFORM-KEY header).</helpText>
+        </input-field>
+        <input-field type="text">
+            <name>srsBranchId</name>
+            <label>SRS Branch ID</label>
+            <helpText>Branch/filiaal ID used when redeeming the voucher in SRS (for example: 1).</helpText>
+            <defaultValue>1</defaultValue>
+        </input-field>
     </card>
 
     <card>

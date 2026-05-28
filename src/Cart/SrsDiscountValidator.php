@@ -8,6 +8,7 @@ use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Cart\CartValidatorInterface;
 use Shopware\Core\Checkout\Cart\Error\ErrorCollection;
 use Shopware\Core\Checkout\Cart\Error\GenericCartError;
+use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
@@ -35,15 +36,18 @@ class SrsDiscountValidator implements CartValidatorInterface
 
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private EntityRepository $promotionIndividualCodeRepository;
+    private EntityRepository $promotionRepository;
     private LoggerInterface $logger;
 
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         EntityRepository $promotionIndividualCodeRepository,
+        EntityRepository $promotionRepository,
         LoggerInterface $logger
     ) {
         $this->loyaltyEngageApiService           = $loyaltyEngageApiService;
         $this->promotionIndividualCodeRepository = $promotionIndividualCodeRepository;
+        $this->promotionRepository               = $promotionRepository;
         $this->logger                            = $logger;
     }
 
@@ -82,38 +86,12 @@ class SrsDiscountValidator implements CartValidatorInterface
                 continue;
             }
 
-            // Check if this code belongs to a LoyaltyEngage promotion
-            $criteria = new Criteria();
-            $criteria->addFilter(new EqualsFilter('code', $promotionCode));
-            $criteria->addAssociation('promotion');
-            $criteria->setLimit(1);
-
-            $searchResult = $this->promotionIndividualCodeRepository->search($criteria, $context->getContext());
-            $codeEntity   = $searchResult->first();
-
-            if ($codeEntity === null) {
-                $this->logger->warning('SrsDiscountValidator: Code not found in promotion_individual_code', [
+            $promotionName = $this->resolvePromotionName($promotionCode, $context);
+            if ($promotionName === null) {
+                $this->logger->warning('SrsDiscountValidator: Code not found in Shopware promotions', [
                     'code' => $promotionCode,
                 ]);
                 continue;
-            }
-
-            // Resolve promotion name via the loaded association
-            $promotionName = '';
-            try {
-                $promotion = $codeEntity->get('promotion');
-                if ($promotion !== null && method_exists($promotion, 'getName')) {
-                    $promotionName = (string) $promotion->getName();
-                }
-            } catch (\Throwable $e) {
-                // Fallback: try getVars
-                $vars      = $codeEntity->getVars();
-                $promotion = $vars['promotion'] ?? null;
-                if (is_array($promotion)) {
-                    $promotionName = (string) ($promotion['name'] ?? '');
-                } elseif ($promotion !== null && method_exists($promotion, 'getName')) {
-                    $promotionName = (string) $promotion->getName();
-                }
             }
 
             $this->logger->warning('SrsDiscountValidator: Found promotion code in cart', [
@@ -131,16 +109,7 @@ class SrsDiscountValidator implements CartValidatorInterface
 
             // This is a LoyaltyEngage code — check SRS status
             $srsResult = $this->loyaltyEngageApiService->checkSrsVoucherStatus($promotionCode);
-
-            if (empty($srsResult)) {
-                // API call failed — fail open, allow the code through
-                $this->logger->warning('SrsDiscountValidator: SRS API call failed or returned empty, allowing code through', [
-                    'code' => $promotionCode,
-                ]);
-                continue;
-            }
-
-            $blockReason    = $this->loyaltyEngageApiService->getVoucherBlockState($promotionCode);
+            $blockReason    = $this->loyaltyEngageApiService->getVoucherBlockStateFromSrsResult($srsResult);
 
             $this->logger->warning('SrsDiscountValidator: SRS voucher status result', [
                 'code'        => $promotionCode,
@@ -165,5 +134,69 @@ class SrsDiscountValidator implements CartValidatorInterface
                 ));
             }
         }
+    }
+
+    private function resolvePromotionName(string $promotionCode, SalesChannelContext $context): ?string
+    {
+        $criteria = new Criteria();
+        $criteria->addFilter(new EqualsFilter('code', $promotionCode));
+        $criteria->addAssociation('promotion');
+        $criteria->setLimit(1);
+
+        $searchResult = $this->promotionIndividualCodeRepository->search($criteria, $context->getContext());
+        $codeEntity   = $searchResult->first();
+
+        if ($codeEntity instanceof Entity) {
+            $promotionName = $this->extractPromotionName($codeEntity->get('promotion'));
+            if ($promotionName !== '') {
+                return $promotionName;
+            }
+        }
+
+        $promotionCriteria = new Criteria();
+        $promotionCriteria->addFilter(new EqualsFilter('code', $promotionCode));
+        $promotionCriteria->addAssociation('translations');
+        $promotionCriteria->setLimit(1);
+
+        $promotion = $this->promotionRepository->search($promotionCriteria, $context->getContext())->first();
+        if (!$promotion instanceof Entity) {
+            return null;
+        }
+
+        $translatedName = (string) $promotion->getTranslation('name');
+        if ($translatedName !== '') {
+            return $translatedName;
+        }
+
+        return $this->extractPromotionName($promotion);
+    }
+
+    private function extractPromotionName($promotion): string
+    {
+        if ($promotion === null) {
+            return '';
+        }
+
+        if (is_array($promotion)) {
+            return (string) ($promotion['name'] ?? '');
+        }
+
+        if (method_exists($promotion, 'getTranslation')) {
+            $translatedName = (string) $promotion->getTranslation('name');
+            if ($translatedName !== '') {
+                return $translatedName;
+            }
+        }
+
+        if (method_exists($promotion, 'getName')) {
+            return (string) $promotion->getName();
+        }
+
+        if (method_exists($promotion, 'getVars')) {
+            $vars = $promotion->getVars();
+            return (string) ($vars['name'] ?? '');
+        }
+
+        return '';
     }
 }
