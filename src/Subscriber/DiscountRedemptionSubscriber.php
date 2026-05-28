@@ -107,21 +107,25 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
                 continue;
             }
 
-            $this->logger->info('DiscountRedemptionSubscriber: LoyaltyEngage code redeemed', [
-                'code'          => $promotionCode,
-                'promotionName' => $promotionName,
-                'email'         => $email,
-                'orderId'       => $order->getId(),
-            ]);
+            if ($this->loyaltyEngageApiService->getLoggerStatus()) {
+                $this->logger->info('DiscountRedemptionSubscriber: LoyaltyEngage code redeemed', [
+                    'code'          => $promotionCode,
+                    'promotionName' => $promotionName,
+                    'email'         => $email,
+                    'orderId'       => $order->getId(),
+                ]);
+            }
 
             // 1. Mark as redeemed in LoyaltyEngage API
             try {
                 $this->loyaltyEngageApiService->redeemDiscountCode($email, $promotionCode);
             } catch (\Throwable $e) {
-                $this->logger->error('DiscountRedemptionSubscriber: Failed to mark code as redeemed in LoyaltyEngage', [
-                    'code'  => $promotionCode,
-                    'error' => $e->getMessage(),
-                ]);
+                if ($this->loyaltyEngageApiService->getLoggerStatus()) {
+                    $this->logger->error('DiscountRedemptionSubscriber: Failed to mark code as redeemed in LoyaltyEngage', [
+                        'code'  => $promotionCode,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             // 2. Delete the individual code from Shopware so it cannot be reused
@@ -131,22 +135,28 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
                         ['id' => $codeId],
                     ], $context);
 
-                    $this->logger->info('DiscountRedemptionSubscriber: Individual code removed from Shopware', [
-                        'code'   => $promotionCode,
-                        'codeId' => $codeId,
-                    ]);
+                    if ($this->loyaltyEngageApiService->getLoggerStatus()) {
+                        $this->logger->info('DiscountRedemptionSubscriber: Individual code removed from Shopware', [
+                            'code'   => $promotionCode,
+                            'codeId' => $codeId,
+                        ]);
+                    }
                 } catch (\Throwable $e) {
-                    $this->logger->error('DiscountRedemptionSubscriber: Failed to delete individual code from Shopware', [
-                        'code'  => $promotionCode,
-                        'error' => $e->getMessage(),
-                    ]);
+                    if ($this->loyaltyEngageApiService->getLoggerStatus()) {
+                        $this->logger->error('DiscountRedemptionSubscriber: Failed to delete individual code from Shopware', [
+                            'code'  => $promotionCode,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             } else {
-                $this->logger->warning('DiscountRedemptionSubscriber: Individual code was not found during cleanup, redeem was still attempted', [
-                    'code'          => $promotionCode,
-                    'promotionName' => $promotionName,
-                    'orderId'       => $order->getId(),
-                ]);
+                if ($this->loyaltyEngageApiService->getLoggerStatus()) {
+                    $this->logger->warning('DiscountRedemptionSubscriber: Individual code was not found during cleanup, redeem was still attempted', [
+                        'code'          => $promotionCode,
+                        'promotionName' => $promotionName,
+                        'orderId'       => $order->getId(),
+                    ]);
+                }
             }
         }
     }
