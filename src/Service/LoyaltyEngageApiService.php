@@ -298,38 +298,19 @@ class LoyaltyEngageApiService
     /**
      * Resolve the block reason from an SRS result payload.
      *
-     * When SRS sync is enabled, we fail closed: if the bridge does not return
-     * a usable payload, the voucher is blocked instead of being allowed through.
+     * Business rule: only local_redeemed from LoyaltyEngage should block the voucher.
+     * SRS status labels like "redeemed" or "expired" are ignored for cart validation.
      */
     public function getVoucherBlockStateFromSrsResult(array $srsResult): ?string
     {
         if (empty($srsResult)) {
-            return 'momenteel niet te valideren';
+            return null;
         }
 
-        $checkSuccess   = $srsResult['srs_check_success'] ?? false;
-        $srsStatusLabel = $srsResult['srs_status_label'] ?? null;
-        $localRedeemed  = $srsResult['local_redeemed'] ?? false;
-        $localExpired   = $srsResult['local_expired'] ?? false;
-
-        if ($checkSuccess === true && $srsStatusLabel === 'expired') {
-            return 'verlopen';
-        }
-
-        if ($checkSuccess === true && $srsStatusLabel === 'redeemed') {
-            return 'al gebruikt';
-        }
-
-        if ($localExpired === true) {
-            return 'verlopen';
-        }
+        $localRedeemed = $srsResult['local_redeemed'] ?? false;
 
         if ($localRedeemed === true) {
             return 'al gebruikt';
-        }
-
-        if ($checkSuccess !== true) {
-            return 'momenteel niet te valideren';
         }
 
         return null;
