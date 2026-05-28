@@ -74,8 +74,11 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
                 continue;
             }
 
-            // Check if this code belongs to a LoyaltyEngage promotion
-            // by looking up the individual code and checking the promotion name
+            $promotionName = (string) ($lineItem->getLabel() ?? '');
+            $codeId = null;
+
+            // Prefer the order line item label because the individual code may
+            // already be gone by the time this event is processed.
             $criteria = new Criteria();
             $criteria->addFilter(new EqualsFilter('code', $promotionCode));
             $criteria->addAssociation('promotion');
@@ -84,24 +87,19 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
             $searchResult = $this->promotionIndividualCodeRepository->search($criteria, $context);
             $codeIds      = $searchResult->getIds();
 
-            if (empty($codeIds)) {
-                continue;
-            }
+            if (!empty($codeIds)) {
+                $codeId     = reset($codeIds);
+                $codeEntity = $searchResult->first();
 
-            $codeId     = reset($codeIds);
-            $codeEntity = $searchResult->first();
-
-            // Check if the promotion name starts with our prefix
-            // The association is loaded so we can access it via the entity
-            $promotionName = '';
-            if ($codeEntity !== null) {
-                /** @var \Shopware\Core\Framework\DataAbstractionLayer\Entity $codeEntity */
-                $vars = $codeEntity->getVars();
-                $promotion = $vars['promotion'] ?? null;
-                if ($promotion !== null && method_exists($promotion, 'getName')) {
-                    $promotionName = (string) $promotion->getName();
-                } elseif ($promotion !== null && is_array($promotion)) {
-                    $promotionName = (string) ($promotion['name'] ?? '');
+                if ($codeEntity !== null) {
+                    /** @var \Shopware\Core\Framework\DataAbstractionLayer\Entity $codeEntity */
+                    $vars = $codeEntity->getVars();
+                    $promotion = $vars['promotion'] ?? null;
+                    if ($promotion !== null && method_exists($promotion, 'getName')) {
+                        $promotionName = (string) $promotion->getName();
+                    } elseif ($promotion !== null && is_array($promotion)) {
+                        $promotionName = (string) ($promotion['name'] ?? '');
+                    }
                 }
             }
 
@@ -127,19 +125,27 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
             }
 
             // 2. Delete the individual code from Shopware so it cannot be reused
-            try {
-                $this->promotionIndividualCodeRepository->delete([
-                    ['id' => $codeId],
-                ], $context);
+            if ($codeId !== null) {
+                try {
+                    $this->promotionIndividualCodeRepository->delete([
+                        ['id' => $codeId],
+                    ], $context);
 
-                $this->logger->info('DiscountRedemptionSubscriber: Individual code removed from Shopware', [
-                    'code'   => $promotionCode,
-                    'codeId' => $codeId,
-                ]);
-            } catch (\Throwable $e) {
-                $this->logger->error('DiscountRedemptionSubscriber: Failed to delete individual code from Shopware', [
-                    'code'  => $promotionCode,
-                    'error' => $e->getMessage(),
+                    $this->logger->info('DiscountRedemptionSubscriber: Individual code removed from Shopware', [
+                        'code'   => $promotionCode,
+                        'codeId' => $codeId,
+                    ]);
+                } catch (\Throwable $e) {
+                    $this->logger->error('DiscountRedemptionSubscriber: Failed to delete individual code from Shopware', [
+                        'code'  => $promotionCode,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            } else {
+                $this->logger->warning('DiscountRedemptionSubscriber: Individual code was not found during cleanup, redeem was still attempted', [
+                    'code'          => $promotionCode,
+                    'promotionName' => $promotionName,
+                    'orderId'       => $order->getId(),
                 ]);
             }
         }

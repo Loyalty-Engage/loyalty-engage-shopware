@@ -110,24 +110,6 @@ class LoyaltyEngageApiService
     }
 
     /**
-     * Get SRS Client ID from config.
-     * Falls back to the main client ID when no dedicated SRS credential is set.
-     */
-    public function getSrsClientId(): ?string
-    {
-        return $this->systemConfigService->get('LoyaltyEngage.config.srsClientId') ?: $this->getTenantId();
-    }
-
-    /**
-     * Get SRS Client Secret from config.
-     * Falls back to the main client secret when no dedicated SRS credential is set.
-     */
-    public function getSrsClientSecret(): ?string
-    {
-        return $this->systemConfigService->get('LoyaltyEngage.config.srsClientSecret') ?: $this->getBearerToken();
-    }
-
-    /**
      * Get SRS platform key from config.
      */
     public function getSrsPlatformKey(): ?string
@@ -164,6 +146,14 @@ class LoyaltyEngageApiService
         $tenantId = $this->getSrsTenantId();
         if (!$tenantId) {
             $this->logger->warning('LoyaltyEngage: SRS Tenant ID not configured, skipping voucher check', [
+                'barcode' => $barcode,
+            ]);
+            return [];
+        }
+
+        $platformKey = $this->getSrsPlatformKey();
+        if (!$platformKey) {
+            $this->logger->warning('LoyaltyEngage: SRS Platform Key not configured, skipping voucher check', [
                 'barcode' => $barcode,
             ]);
             return [];
@@ -432,17 +422,6 @@ class LoyaltyEngageApiService
     }
 
     /**
-     * Generate Basic Auth string for the SRS bridge.
-     */
-    private function getSrsBasicAuth(): string
-    {
-        $clientId = $this->getSrsClientId();
-        $clientSecret = $this->getSrsClientSecret();
-
-        return base64_encode($clientId . ':' . $clientSecret);
-    }
-
-    /**
      * Get default HTTP headers for API requests
      */
     private function getDefaultHeaders(): array
@@ -458,19 +437,10 @@ class LoyaltyEngageApiService
      */
     private function getSrsHeaders(): array
     {
-        $headers = [
+        return [
             'Content-Type' => 'application/json',
+            'X-PLATFORM-KEY' => (string) $this->getSrsPlatformKey(),
         ];
-
-        $platformKey = $this->getSrsPlatformKey();
-        if (!empty($platformKey)) {
-            $headers['X-PLATFORM-KEY'] = $platformKey;
-        }
-
-        // Keep Basic Auth as fallback/compatibility for bridge setups that still expect it.
-        $headers['Authorization'] = 'Basic ' . $this->getSrsBasicAuth();
-
-        return $headers;
     }
 
     /**
@@ -845,6 +815,14 @@ class LoyaltyEngageApiService
         // body: { "identifier": "{email}" }
         $url = $this->getValidatedApiUrl() . '/api/v1/discount/' . urlencode($code) . '/redeem';
 
+        if ($this->getLoggerStatus()) {
+            $this->logger->info('LoyaltyEngage: redeemDiscountCode request', [
+                'email' => $email,
+                'code'  => $code,
+                'url'   => $url,
+            ]);
+        }
+
         try {
             $response = $this->httpClient->request('PUT', $url, [
                 'headers' => $this->getDefaultHeaders(),
@@ -865,13 +843,51 @@ class LoyaltyEngageApiService
 
             $success = $statusCode === self::HTTP_OK || $statusCode === 204;
 
-            if ($success && $this->canRedeemSrsVoucher()) {
-                $srsRedeemed = $this->redeemSrsVoucher($code);
+            if ($success) {
+                $canRedeemSrs = $this->canRedeemSrsVoucher();
 
-                if (!$srsRedeemed) {
-                    $this->logger->warning('LoyaltyEngage: redeemDiscountCode succeeded but SRS redeem failed', [
+                if ($this->getLoggerStatus()) {
+                    $this->logger->info('LoyaltyEngage: redeemDiscountCode SRS redeem decision', [
+                        'email'          => $email,
+                        'code'           => $code,
+                        'canRedeemSrs'   => $canRedeemSrs,
+                        'hasTenantId'    => !empty($this->getSrsTenantId()),
+                        'hasPlatformKey' => !empty($this->getSrsPlatformKey()),
+                        'hasBranchId'    => !empty($this->getSrsBranchId()),
+                    ]);
+                }
+
+                if ($canRedeemSrs) {
+                    if ($this->getLoggerStatus()) {
+                        $this->logger->info('LoyaltyEngage: redeemDiscountCode starting SRS redeem', [
+                            'email' => $email,
+                            'code'  => $code,
+                        ]);
+                    }
+
+                    $srsRedeemed = $this->redeemSrsVoucher($code);
+
+                    if ($this->getLoggerStatus()) {
+                        $this->logger->info('LoyaltyEngage: redeemDiscountCode finished SRS redeem', [
+                            'email'       => $email,
+                            'code'        => $code,
+                            'srsRedeemed' => $srsRedeemed,
+                        ]);
+                    }
+
+                    if (!$srsRedeemed) {
+                        $this->logger->warning('LoyaltyEngage: redeemDiscountCode succeeded but SRS redeem failed', [
+                            'email' => $email,
+                            'code'  => $code,
+                        ]);
+                    }
+                } else {
+                    $this->logger->warning('LoyaltyEngage: redeemDiscountCode skipped SRS redeem because configuration is incomplete', [
                         'email' => $email,
                         'code'  => $code,
+                        'hasTenantId'    => !empty($this->getSrsTenantId()),
+                        'hasPlatformKey' => !empty($this->getSrsPlatformKey()),
+                        'hasBranchId'    => !empty($this->getSrsBranchId()),
                     ]);
                 }
             }
