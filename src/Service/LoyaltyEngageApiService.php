@@ -863,7 +863,20 @@ class LoyaltyEngageApiService
                 ]);
             }
 
-            return $statusCode === self::HTTP_OK || $statusCode === 204;
+            $success = $statusCode === self::HTTP_OK || $statusCode === 204;
+
+            if ($success && $this->canRedeemSrsVoucher()) {
+                $srsRedeemed = $this->redeemSrsVoucher($code);
+
+                if (!$srsRedeemed) {
+                    $this->logger->warning('LoyaltyEngage: redeemDiscountCode succeeded but SRS redeem failed', [
+                        'email' => $email,
+                        'code'  => $code,
+                    ]);
+                }
+            }
+
+            return $success;
         } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
             $this->logger->error('LoyaltyEngage: redeemDiscountCode error', [
                 'email' => $email,

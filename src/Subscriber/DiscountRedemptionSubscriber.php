@@ -126,28 +126,6 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
                 ]);
             }
 
-            // 1b. Mark as redeemed in SRS bridge at the same moment as the LoyaltyEngage redeem call
-            if ($this->loyaltyEngageApiService->canRedeemSrsVoucher()) {
-                try {
-                    $srsRedeemed = $this->loyaltyEngageApiService->redeemSrsVoucher($promotionCode);
-
-                    if (!$srsRedeemed) {
-                        $this->logger->warning('DiscountRedemptionSubscriber: Failed to mark code as redeemed in SRS bridge', [
-                            'code' => $promotionCode,
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    $this->logger->error('DiscountRedemptionSubscriber: Failed to mark code as redeemed in SRS bridge', [
-                        'code'  => $promotionCode,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            } else {
-                $this->logger->warning('DiscountRedemptionSubscriber: SRS bridge redeem skipped due to missing configuration', [
-                    'code' => $promotionCode,
-                ]);
-            }
-
             // 2. Delete the individual code from Shopware so it cannot be reused
             try {
                 $this->promotionIndividualCodeRepository->delete([
