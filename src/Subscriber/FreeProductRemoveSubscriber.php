@@ -5,7 +5,7 @@ namespace LoyaltyEngage\Subscriber;
 use LoyaltyEngage\Message\FreeProductRemoveMessage;
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Psr\Log\LoggerInterface;
-use Shopware\Core\Checkout\Cart\Event\LineItemRemovedEvent;
+use Shopware\Core\Checkout\Cart\Event\BeforeLineItemRemovedEvent;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -40,11 +40,11 @@ class FreeProductRemoveSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            LineItemRemovedEvent::class => 'onLineItemRemoved',
+            BeforeLineItemRemovedEvent::class => 'onLineItemRemoved',
         ];
     }
 
-    public function onLineItemRemoved(LineItemRemovedEvent $event): void
+    public function onLineItemRemoved(BeforeLineItemRemovedEvent $event): void
     {
         try {
             $lineItem = $event->getLineItem();
