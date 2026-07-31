@@ -78,7 +78,7 @@ class FreeProductRemoveSubscriber implements EventSubscriberInterface
             // Dispatch a delayed removeAllItems message.
             // The delay batches rapid successive removals into a single API call,
             // preventing rate-limiting on the LoyaltyEngage delete endpoint.
-            $message = new FreeProductRemoveMessage($email);
+            $message = new FreeProductRemoveMessage($email, $salesChannelContext->getSalesChannelId());
 
             $this->logger->info('FreeProductRemoveSubscriber: Dispatching removeAllItems message (delayed)', [
                 'email'   => $email,

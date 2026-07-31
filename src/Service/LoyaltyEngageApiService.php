@@ -56,17 +56,17 @@ class LoyaltyEngageApiService
     /**
      * Get Tenant ID from config
      */
-    public function getTenantId(): ?string
+    public function getTenantId(?string $salesChannelId = null): ?string
     {
-        return $this->systemConfigService->get('LoyaltyEngage.config.tenantId');
+        return $this->getConfigValueWithFallback('LoyaltyEngage.config.tenantId', $salesChannelId);
     }
 
     /**
      * Get Bearer Token from config
      */
-    public function getBearerToken(): ?string
+    public function getBearerToken(?string $salesChannelId = null): ?string
     {
-        return $this->systemConfigService->get('LoyaltyEngage.config.bearerToken');
+        return $this->getConfigValueWithFallback('LoyaltyEngage.config.bearerToken', $salesChannelId);
     }
 
     /**
@@ -413,10 +413,10 @@ class LoyaltyEngageApiService
     /**
      * Generate Basic Auth string
      */
-    private function getBasicAuth(): string
+    private function getBasicAuth(?string $salesChannelId = null): string
     {
-        $tenantId = $this->getTenantId();
-        $bearerToken = $this->getBearerToken();
+        $tenantId = $this->getTenantId($salesChannelId);
+        $bearerToken = $this->getBearerToken($salesChannelId);
 
         return base64_encode($tenantId . ':' . $bearerToken);
     }
@@ -424,12 +424,28 @@ class LoyaltyEngageApiService
     /**
      * Get default HTTP headers for API requests
      */
-    private function getDefaultHeaders(): array
+    private function getDefaultHeaders(?string $salesChannelId = null): array
     {
         return [
             'Content-Type' => 'application/json',
-            'Authorization' => 'Basic ' . $this->getBasicAuth(),
+            'Authorization' => 'Basic ' . $this->getBasicAuth($salesChannelId),
         ];
+    }
+
+    /**
+     * Resolve a plugin config value with sales-channel-first fallback.
+     */
+    private function getConfigValueWithFallback(string $key, ?string $salesChannelId = null)
+    {
+        if ($salesChannelId) {
+            $salesChannelValue = $this->systemConfigService->get($key, $salesChannelId);
+
+            if ($salesChannelValue !== null && $salesChannelValue !== '') {
+                return $salesChannelValue;
+            }
+        }
+
+        return $this->systemConfigService->get($key);
     }
 
     /**
@@ -446,7 +462,7 @@ class LoyaltyEngageApiService
     /**
      * Add a product to the loyalty cart
      */
-    public function addToCart(string $email, string $sku): int
+    public function addToCart(string $email, string $sku, ?string $salesChannelId = null): int
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/add';
         $payload = [
@@ -464,7 +480,7 @@ class LoyaltyEngageApiService
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json' => $payload,
             ]);
 
@@ -492,7 +508,7 @@ class LoyaltyEngageApiService
     /**
      * Remove a product from the loyalty cart
      */
-    public function removeItem(string $email, string $sku, int $quantity): ?int
+    public function removeItem(string $email, string $sku, int $quantity, ?string $salesChannelId = null): ?int
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/remove';
         $data = [
@@ -502,7 +518,7 @@ class LoyaltyEngageApiService
 
         try {
             $response = $this->httpClient->request('DELETE', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json' => $data,
             ]);
 
@@ -521,13 +537,13 @@ class LoyaltyEngageApiService
     /**
      * Remove all products from the loyalty cart
      */
-    public function removeAllItems(string $email): ?int
+    public function removeAllItems(string $email, ?string $salesChannelId = null): ?int
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart';
 
         try {
             $response = $this->httpClient->request('DELETE', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
             ]);
 
             return $response->getStatusCode();
@@ -544,9 +560,9 @@ class LoyaltyEngageApiService
     /**
      * Place an order in the loyalty system
      */
-    public function placeOrder(string $email, string $orderId, array $products): ?int
+    public function placeOrder(string $email, string $orderId, array $products, ?string $salesChannelId = null): ?int
     {
-        $result = $this->placeOrderWithResponse($email, $orderId, $products);
+        $result = $this->placeOrderWithResponse($email, $orderId, $products, $salesChannelId);
         return $result['statusCode'] ?? null;
     }
 
@@ -555,7 +571,7 @@ class LoyaltyEngageApiService
      *
      * @return array{statusCode: int|null, body: string|null}
      */
-    public function placeOrderWithResponse(string $email, string $orderId, array $products): array
+    public function placeOrderWithResponse(string $email, string $orderId, array $products, ?string $salesChannelId = null): array
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/purchase';
         $data = [
@@ -573,7 +589,7 @@ class LoyaltyEngageApiService
 
         try {
             $response   = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json'    => $data,
             ]);
 
@@ -601,7 +617,7 @@ class LoyaltyEngageApiService
     /**
      * Send event to the loyalty system
      */
-    public function sendEvent(array $payload): ?int
+    public function sendEvent(array $payload, ?string $salesChannelId = null): ?int
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/events';
 
@@ -614,7 +630,7 @@ class LoyaltyEngageApiService
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json' => $payload,
             ]);
 
@@ -646,7 +662,7 @@ class LoyaltyEngageApiService
      * @param string $sku SKU of the discount code product
      * @return array|null Response with discount code info or null on failure
      */
-    public function buyDiscountCodeProduct(string $email, string $sku): ?array
+    public function buyDiscountCodeProduct(string $email, string $sku, ?string $salesChannelId = null): ?array
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/buy_discount_code';
         $payload = [
@@ -661,7 +677,7 @@ class LoyaltyEngageApiService
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json' => $payload,
             ]);
 
@@ -703,7 +719,7 @@ class LoyaltyEngageApiService
      * @param int $quantity Number of times to purchase the discount product
      * @return array Result with success status and discount codes
      */
-    public function buyMultipleDiscountCodeProducts(string $email, string $sku, int $quantity): array
+    public function buyMultipleDiscountCodeProducts(string $email, string $sku, int $quantity, ?string $salesChannelId = null): array
     {
         $results = [];
         $successCount = 0;
@@ -718,7 +734,7 @@ class LoyaltyEngageApiService
         }
 
         for ($i = 0; $i < $quantity; $i++) {
-            $result = $this->buyDiscountCodeProduct($email, $sku);
+            $result = $this->buyDiscountCodeProduct($email, $sku, $salesChannelId);
 
             if ($result !== null) {
                 $successCount++;
@@ -754,7 +770,7 @@ class LoyaltyEngageApiService
     /**
      * Claim a discount from the loyalty system
      */
-    public function claimDiscount(string $email, float $discount): ?array
+    public function claimDiscount(string $email, float $discount, ?string $salesChannelId = null): ?array
     {
         $url = $this->getValidatedApiUrl() . '/api/v1/discount/' . urlencode($email) . '/claim';
         $payload = ['discount' => $discount];
@@ -767,7 +783,7 @@ class LoyaltyEngageApiService
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json' => $payload,
             ]);
 
@@ -809,7 +825,7 @@ class LoyaltyEngageApiService
      * @param string $code        The discount code that was redeemed
      * @return bool               True on success, false on failure
      */
-    public function redeemDiscountCode(string $email, string $code): bool
+    public function redeemDiscountCode(string $email, string $code, ?string $salesChannelId = null): bool
     {
         // PUT /api/v1/discount/{discountCode}/redeem
         // body: { "identifier": "{email}" }
@@ -825,7 +841,7 @@ class LoyaltyEngageApiService
 
         try {
             $response = $this->httpClient->request('PUT', $url, [
-                'headers' => $this->getDefaultHeaders(),
+                'headers' => $this->getDefaultHeaders($salesChannelId),
                 'json' => [
                     'identifier' => $email,
                 ],

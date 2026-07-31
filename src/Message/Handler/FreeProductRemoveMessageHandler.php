@@ -33,7 +33,7 @@ class FreeProductRemoveMessageHandler
             // Use removeAllItems() instead of removeItem() per product.
             // This ensures exactly ONE API call per customer regardless of how many
             // loyalty products were removed, preventing rate-limiting (HTTP 429).
-            $response = $this->loyaltyEngageApiService->removeAllItems($email);
+            $response = $this->loyaltyEngageApiService->removeAllItems($email, $message->getSalesChannelId());
 
             if ($response === 200) {
                 $this->logger->info('FreeProductRemoveMessageHandler: removeAllItems sent successfully', [

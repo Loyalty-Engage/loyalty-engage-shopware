@@ -20,15 +20,21 @@ class ReturnMessage
     private $products;
 
     /**
+     * @var string|null
+     */
+    private $salesChannelId;
+
+    /**
      * @param string $email
      * @param string $returnDate
      * @param array $products
      */
-    public function __construct(string $email, string $returnDate, array $products)
+    public function __construct(string $email, string $returnDate, array $products, ?string $salesChannelId = null)
     {
         $this->email = $email;
         $this->returnDate = $returnDate;
         $this->products = $products;
+        $this->salesChannelId = $salesChannelId;
     }
 
     /**
@@ -53,6 +59,11 @@ class ReturnMessage
     public function getProducts(): array
     {
         return $this->products;
+    }
+
+    public function getSalesChannelId(): ?string
+    {
+        return $this->salesChannelId;
     }
 
     /**

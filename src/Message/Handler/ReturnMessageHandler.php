@@ -43,7 +43,7 @@ class ReturnMessageHandler
                 'returnDate' => $message->getReturnDate()
             ]);
 
-            $response = $this->loyaltyEngageApiService->sendEvent($message->toArray());
+            $response = $this->loyaltyEngageApiService->sendEvent($message->toArray(), $message->getSalesChannelId());
 
             if ($response === 200) {
                 $this->logger->info('Return event sent successfully', [

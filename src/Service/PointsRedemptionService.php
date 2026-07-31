@@ -151,7 +151,8 @@ class PointsRedemptionService
             $apiResult = $this->loyaltyEngageApiService->buyMultipleDiscountCodeProducts(
                 $email,
                 $discountProductSku,
-                $numberOfProducts
+                $numberOfProducts,
+                $context->getSalesChannelId()
             );
 
             if (!$apiResult['success']) {

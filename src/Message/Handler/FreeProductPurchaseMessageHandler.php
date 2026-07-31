@@ -47,7 +47,8 @@ class FreeProductPurchaseMessageHandler
             $response = $this->loyaltyEngageApiService->placeOrderWithResponse(
                 $message->getEmail(),
                 $message->getOrderId(),
-                $message->getProducts()
+                $message->getProducts(),
+                $message->getSalesChannelId()
             );
 
             $statusCode  = $response['statusCode'] ?? null;

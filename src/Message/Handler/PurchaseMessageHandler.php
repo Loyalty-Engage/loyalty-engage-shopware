@@ -43,7 +43,7 @@ class PurchaseMessageHandler
                 'orderId' => $message->getOrderId()
             ]);
 
-            $response = $this->loyaltyEngageApiService->sendEvent($message->toArray());
+            $response = $this->loyaltyEngageApiService->sendEvent($message->toArray(), $message->getSalesChannelId());
 
             if ($response === 200) {
                 $this->logger->info('Purchase event sent successfully', [

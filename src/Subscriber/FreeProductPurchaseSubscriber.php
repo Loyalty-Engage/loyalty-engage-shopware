@@ -94,7 +94,7 @@ class FreeProductPurchaseSubscriber implements EventSubscriberInterface
                 return;
             }
 
-            $message = new FreeProductPurchaseMessage($email, $orderNumber, $freeProducts);
+            $message = new FreeProductPurchaseMessage($email, $orderNumber, $freeProducts, $order->getSalesChannelId());
 
             $this->logger->info('FreeProductPurchaseSubscriber: Dispatching cart/purchase message', [
                 'orderNumber'  => $orderNumber,

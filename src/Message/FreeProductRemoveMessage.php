@@ -13,14 +13,21 @@ namespace LoyaltyEngage\Message;
 class FreeProductRemoveMessage
 {
     private string $email;
+    private ?string $salesChannelId;
 
-    public function __construct(string $email)
+    public function __construct(string $email, ?string $salesChannelId = null)
     {
         $this->email = $email;
+        $this->salesChannelId = $salesChannelId;
     }
 
     public function getEmail(): string
     {
         return $this->email;
+    }
+
+    public function getSalesChannelId(): ?string
+    {
+        return $this->salesChannelId;
     }
 }

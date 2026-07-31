@@ -208,7 +208,7 @@ class PurchaseSubscriber implements EventSubscriberInterface
                 ]);
             }
 
-            $message = new PurchaseMessage($email, $orderNumber, $orderDate, $products);
+            $message = new PurchaseMessage($email, $orderNumber, $orderDate, $products, $order->getSalesChannelId());
 
             $this->logger->info('LoyaltyEngage: Dispatching purchase message to queue', [
                 'orderId' => $orderNumber

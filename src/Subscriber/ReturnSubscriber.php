@@ -207,7 +207,7 @@ class ReturnSubscriber implements EventSubscriberInterface
                 ]);
             }
 
-            $message = new ReturnMessage($email, $returnDate, $products);
+            $message = new ReturnMessage($email, $returnDate, $products, $order->getSalesChannelId());
 
             $this->logger->info('LoyaltyEngage: Dispatching return message to queue', [
                 'returnDate' => $returnDate

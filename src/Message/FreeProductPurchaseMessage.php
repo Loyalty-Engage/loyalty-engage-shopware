@@ -20,15 +20,21 @@ class FreeProductPurchaseMessage
     private $products;
 
     /**
+     * @var string|null
+     */
+    private $salesChannelId;
+
+    /**
      * @param string $email
      * @param string $orderId
      * @param array $products
      */
-    public function __construct(string $email, string $orderId, array $products)
+    public function __construct(string $email, string $orderId, array $products, ?string $salesChannelId = null)
     {
         $this->email = $email;
         $this->orderId = $orderId;
         $this->products = $products;
+        $this->salesChannelId = $salesChannelId;
     }
 
     /**
@@ -53,5 +59,10 @@ class FreeProductPurchaseMessage
     public function getProducts(): array
     {
         return $this->products;
+    }
+
+    public function getSalesChannelId(): ?string
+    {
+        return $this->salesChannelId;
     }
 }

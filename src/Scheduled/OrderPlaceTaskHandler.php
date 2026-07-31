@@ -101,7 +101,7 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
             }
 
             // Place order
-            $response = $this->loyaltyEngageApiService->placeOrder($email, $orderNumber, $products);
+            $response = $this->loyaltyEngageApiService->placeOrder($email, $orderNumber, $products, $order->getSalesChannelId());
 
             $customFields = $order->getCustomFields() ?? [];
 

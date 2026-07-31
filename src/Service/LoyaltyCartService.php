@@ -117,7 +117,7 @@ class LoyaltyCartService
 
             // Check with loyalty API BEFORE adding to cart — if the customer does not have
             // enough points the product must NOT be added to the Shopware cart.
-            $apiResponse = $this->loyaltyEngageApiService->addToCart($email, $sku);
+            $apiResponse = $this->loyaltyEngageApiService->addToCart($email, $sku, $context->getSalesChannelId());
             if ($apiResponse !== self::HTTP_OK) {
                 return $this->createErrorResponse('Product could not be added. User is not eligible.');
             }
@@ -168,7 +168,7 @@ class LoyaltyCartService
 
         try {
             // Notify loyalty API
-            $apiResponse = $this->loyaltyEngageApiService->removeItem($email, $productId, 1);
+            $apiResponse = $this->loyaltyEngageApiService->removeItem($email, $productId, 1, $context->getSalesChannelId());
             if ($apiResponse !== self::HTTP_OK) {
                 return $this->createErrorResponse('Product could not be removed from loyalty system.');
             }
@@ -209,7 +209,7 @@ class LoyaltyCartService
 
         try {
             // Notify loyalty API
-            $apiResponse = $this->loyaltyEngageApiService->removeAllItems($email);
+            $apiResponse = $this->loyaltyEngageApiService->removeAllItems($email, $context->getSalesChannelId());
             if ($apiResponse !== self::HTTP_OK) {
                 return $this->createErrorResponse('Products could not be removed from loyalty system.');
             }
@@ -246,13 +246,13 @@ class LoyaltyCartService
 
         try {
             // Step 1: Add to Loyalty Engage
-            $cartStatus = $this->loyaltyEngageApiService->addToCart($email, $productId);
+            $cartStatus = $this->loyaltyEngageApiService->addToCart($email, $productId, $context->getSalesChannelId());
             if ($cartStatus !== self::HTTP_OK) {
                 return $this->createErrorResponse('Failed to add product to loyalty cart.');
             }
 
             // Step 2: Claim discount
-            $discountResult = $this->loyaltyEngageApiService->claimDiscount($email, $discount);
+            $discountResult = $this->loyaltyEngageApiService->claimDiscount($email, $discount, $context->getSalesChannelId());
             if (!$discountResult) {
                 return $this->createErrorResponse('No discount code returned.');
             }

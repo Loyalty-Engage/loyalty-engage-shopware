@@ -118,7 +118,7 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
 
             // 1. Mark as redeemed in LoyaltyEngage API
             try {
-                $this->loyaltyEngageApiService->redeemDiscountCode($email, $promotionCode);
+                $this->loyaltyEngageApiService->redeemDiscountCode($email, $promotionCode, $order->getSalesChannelId());
             } catch (\Throwable $e) {
                 if ($this->loyaltyEngageApiService->getLoggerStatus()) {
                     $this->logger->error('DiscountRedemptionSubscriber: Failed to mark code as redeemed in LoyaltyEngage', [

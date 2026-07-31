@@ -113,7 +113,7 @@ class LoyaltyShopService
         }
 
         // 3. Check eligibility with LoyaltyEngage API
-        $apiStatus = $this->loyaltyEngageApiService->addToCart($email, $sku);
+        $apiStatus = $this->loyaltyEngageApiService->addToCart($email, $sku, $context->getSalesChannelId());
         if ($apiStatus !== self::HTTP_OK) {
             return $this->error('Product could not be added. User is not eligible.');
         }
@@ -170,7 +170,7 @@ class LoyaltyShopService
         SalesChannelContext $context
     ): array {
         try {
-            $result = $this->loyaltyEngageApiService->buyDiscountCodeProduct($email, $sku);
+            $result = $this->loyaltyEngageApiService->buyDiscountCodeProduct($email, $sku, $context->getSalesChannelId());
 
             if ($result === null) {
                 return $this->error('Discount code could not be claimed. Please try again.');
