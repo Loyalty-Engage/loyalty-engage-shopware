@@ -2,7 +2,7 @@
 
 namespace LoyaltyEngage\Service;
 
-use Shopware\Core\Checkout\Cart\CartPersister;
+use Shopware\Core\Checkout\Cart\AbstractCartPersister;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Checkout\Cart\Price\Struct\QuantityPriceDefinition;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
@@ -45,7 +45,7 @@ class LoyaltyShopService
     private const PROMOTION_NAME_PREFIX = 'LoyaltyEngage: ';
 
     private CartService $cartService;
-    private CartPersister $cartPersister;
+    private AbstractCartPersister $cartPersister;
     private EntityRepository $productRepository;
     private EntityRepository $promotionRepository;
     private EntityRepository $promotionIndividualCodeRepository;
@@ -54,7 +54,7 @@ class LoyaltyShopService
 
     public function __construct(
         CartService $cartService,
-        CartPersister $cartPersister,
+        AbstractCartPersister $cartPersister,
         EntityRepository $productRepository,
         EntityRepository $promotionRepository,
         EntityRepository $promotionIndividualCodeRepository,

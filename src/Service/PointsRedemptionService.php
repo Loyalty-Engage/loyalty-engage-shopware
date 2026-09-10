@@ -3,7 +3,7 @@
 namespace LoyaltyEngage\Service;
 
 use Shopware\Core\Checkout\Cart\Cart;
-use Shopware\Core\Checkout\Cart\CartPersister;
+use Shopware\Core\Checkout\Cart\AbstractCartPersister;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Checkout\Cart\Price\Struct\AbsolutePriceDefinition;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
@@ -27,7 +27,7 @@ class PointsRedemptionService
     private $cartService;
 
     /**
-     * @var CartPersister
+     * @var AbstractCartPersister
      */
     private $cartPersister;
 
@@ -48,14 +48,14 @@ class PointsRedemptionService
 
     /**
      * @param CartService $cartService
-     * @param CartPersister $cartPersister
+     * @param AbstractCartPersister $cartPersister
      * @param EntityRepository $customerRepository
      * @param LoyaltyEngageApiService $loyaltyEngageApiService
      * @param LoggerInterface $logger
      */
     public function __construct(
         CartService $cartService,
-        CartPersister $cartPersister,
+        AbstractCartPersister $cartPersister,
         EntityRepository $customerRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger
