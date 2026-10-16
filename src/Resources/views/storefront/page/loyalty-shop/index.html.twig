@@ -1,0 +1,8 @@
+{% sw_extends '@Storefront/storefront/base.html.twig' %}
+
+{% block base_content %}
+    <div class="container py-4">
+        <h1>{{ 'leShop.title'|trans|sw_sanitize }}</h1>
+        {% sw_include '@LoyaltyEngage/storefront/component/loyalty-shop/listing.html.twig' with { listing: loyaltyShop, pointsName: pointsName } %}
+    </div>
+{% endblock %}

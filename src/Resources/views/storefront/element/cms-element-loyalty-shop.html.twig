@@ -1,0 +1,5 @@
+{% block element_loyalty_shop %}
+    {% if element.data.enabled %}
+        {% sw_include '@LoyaltyEngage/storefront/component/loyalty-shop/listing.html.twig' with { listing: element.data, pointsName: element.data.pointsName } %}
+    {% endif %}
+{% endblock %}

@@ -3,6 +3,8 @@
 namespace LoyaltyEngage\Controller\Storefront;
 
 use LoyaltyEngage\Service\LoyaltyShopService;
+use LoyaltyEngage\Service\LoyaltyShopConfig;
+use LoyaltyEngage\Service\ManagedRewardService;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Storefront\Controller\StorefrontController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +22,7 @@ class LoyaltyShopController extends StorefrontController
 {
     private LoyaltyShopService $loyaltyShopService;
 
-    public function __construct(LoyaltyShopService $loyaltyShopService)
+    public function __construct(LoyaltyShopService $loyaltyShopService, private readonly LoyaltyShopConfig $config, private readonly ManagedRewardService $rewards)
     {
         $this->loyaltyShopService = $loyaltyShopService;
     }
@@ -41,6 +43,11 @@ class LoyaltyShopController extends StorefrontController
 
         $data = json_decode($request->getContent(), true) ?? [];
         $sku  = trim((string) ($data['sku'] ?? ''));
+
+        if ($this->config->enabled($context->getSalesChannelId())) {
+            $result = $this->rewards->redeem($sku, 'physical', (string) ($data['requestId'] ?? ''), $context);
+            return new JsonResponse($result, $result['success'] ? 200 : 400, ['Cache-Control' => 'private, no-store']);
+        }
 
         if ($sku === '') {
             return new JsonResponse(
@@ -75,6 +82,11 @@ class LoyaltyShopController extends StorefrontController
         $data     = json_decode($request->getContent(), true) ?? [];
         $sku      = trim((string) ($data['sku'] ?? ''));
         $discount = (float) ($data['discount'] ?? 0);
+
+        if ($this->config->enabled($context->getSalesChannelId())) {
+            $result = $this->rewards->redeem($sku, 'discount_code', (string) ($data['requestId'] ?? ''), $context);
+            return new JsonResponse($result, $result['success'] ? 200 : 400, ['Cache-Control' => 'private, no-store']);
+        }
 
         if ($sku === '') {
             return new JsonResponse(
