@@ -34,6 +34,64 @@ only enforced/exported when the tier switch is enabled.
 
 ## Feed
 
+### Use Loyalty Engage as the assortment source
+
+Select **Loyalty Engage JSON / NDJSON feed** under **Loyalty assortment source**
+and enter the organization's private export URL under **Loyalty Engage assortment
+feed URL**. It must use HTTPS on `app.loyaltyengage.tech/feed/v1/`. Redirects and
+credentials embedded in URLs are rejected. The URL is never exposed in storefront
+HTML or logged in transport errors. No Basic Auth credentials are sent to this
+read-only source; the separate bridge voucher-creation authentication is unchanged.
+
+The plugin accepts NDJSON, a JSON array or a JSON object containing a `products`
+array. Each record needs `sku`, `type` and a positive integer `coin_price`.
+Vouchers need either `discount_percentage` or `discount_amount` plus an ISO currency.
+Duplicate conflicting SKUs or malformed rows reject the entire refresh. Downloads
+are limited to 8 MB, 20,000 rows and 20 seconds.
+
+Feed membership, reward type, point prices and discount values override product
+custom fields in this mode. Physical rewards must match active leaf products
+assigned to that sales channel by SKU; unmatched physical SKUs stay hidden.
+Shopware provides their titles, media and stock. Existing normal-purchase custom
+field restrictions only apply to the Shopware-managed assortment mode.
+
+Vouchers without a matching product get a virtual PLP card. Their default title
+is derived from the discount amount, and they have no broken product-detail link.
+**Presentation for vouchers without a Shopware product** accepts optional JSON:
+
+```json
+{"DISCOUNT_PER_10":{"title":"10% korting","image":"https://shop.example/voucher.jpg"}}
+```
+
+The optional `description` key is also supported. Feed `title`, `short_description`
+and `image_link` can supply defaults. Virtual vouchers are omitted from a
+category-restricted CMS element, since they have no Shopware category assignment.
+Fixed-currency vouchers cannot be claimed in a different storefront currency.
+
+The example export contains no tier information. Local tier validation only runs
+when the source provides `minimum_required_tier_id`; otherwise Loyalty Engage
+checks tier eligibility during the real reserve/purchase request. The plugin does
+not infer missing tiers from local product custom fields.
+
+Snapshots are cached per channel and URL, by default for 300 seconds (configurable
+60-3600). A subsequent visit refreshes an expired snapshot; no separate cron job
+is required. CMS pages with this element are not stored in the shared HTTP cache,
+so it cannot mask feed changes beyond that duration. A missing, invalid or expired
+unreachable feed disables listing and redemption until a valid snapshot is loaded.
+There is no fallback to the local assortment or to an expired snapshot. Existing
+physical reward carts also block checkout when their feed SKU disappears or the
+source cannot be validated. An explicit refresh is available through:
+
+```sh
+bin/console loyalty:shop:refresh-feed SALES_CHANNEL_ID
+```
+
+The outgoing Shopware product feed returns HTTP 409 in this mode, preventing a
+circular assortment synchronization. Switch back to **Shopware product selection**
+to resume the original product-custom-field and outgoing-feed workflow.
+
+### Use Shopware as the assortment source
+
 Use a separate product source for each organization's sales channel:
 
 `https://SHOP-DOMAIN/loyaltyshop/feed.ndjson?token=YOUR_RANDOM_TOKEN`
@@ -71,7 +129,12 @@ through the customer's category/landing-page setup.
 
 The standalone `/loyaltyshop` route is available immediately for testing.
 It shows 24 rewards per page, name/points sorting, points prices and stock-based
-availability. It inherits the active storefront theme. Both versions load login
+availability. The listing inherits Shopware's standard PLP and product-card
+templates so the active storefront theme's compatible card/grid overrides apply.
+Only price and purchase action are replaced with points and redemption controls;
+pagination and sorting retain the loyalty endpoints instead of the category AJAX
+filter API. Theme-specific replacements of other card layouts and category
+sidebars/filters are not automatically copied. Both versions load login
 state and synchronized coin balance from a private, no-store endpoint; personal
 balances are not included in shared CMS HTML. The existing customer-data API
 updates `le_available_coins` and `le_current_tier`. This is not a new live balance
@@ -121,6 +184,7 @@ Run isolated tests:
 ```sh
 php tests/loyalty-shop-smoke.php /path/to/shopware/vendor/autoload.php
 php tests/srs-voucher-smoke.php /path/to/shopware/vendor/autoload.php
+php tests/loyalty-feed-smoke.php /path/to/shopware/vendor/autoload.php
 ```
 
 Run the real-cart integration checks only in a local database with the demo
@@ -134,6 +198,18 @@ This uses a fresh cart context with a mocked HTTP client, validates request repl
 free pricing, stock and catalogue restrictions, multilingual feed consistency and
 revoked authorization. It leaves no spendable mocked reservation. It never places
 an order. Existing customer data is read for context, not changed.
+
+The native integration test temporarily selects the Shopware assortment and
+restores the previous source on exit. With the supplied sample source URL and a
+local `24-MB01` product available, run both native and feed-mode checks through:
+
+```sh
+php tests/loyalty-feed-integration.php /path/to/shopware SALES_CHANNEL_ID
+```
+
+Feed-mode checks mock voucher and reservation actions, verify both discount
+types, accept a matched physical reward and reject removed/incorrect-type SKUs.
+Native cart validation may perform a read-only source GET; no real reward is claimed.
 
 ## Before replacing Premsoft
 

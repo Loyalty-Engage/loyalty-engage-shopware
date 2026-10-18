@@ -41,8 +41,12 @@ class ManagedRewardService
             }
             $product = $this->catalog->find($sku, $context);
             if (!$product) { return $this->error('Deze loyaltybeloning is niet beschikbaar.'); }
-            $fields = $this->catalog->fields($product);
+            $fields = $this->catalog->fields($product, $context->getSalesChannelId());
             if (($fields['le_shop_type'] ?? 'physical') !== $type) { return $this->error('Ongeldig beloningstype.'); }
+            if ($type === 'discount_code' && !empty($fields['le_shop_discount_currency'])
+                && $fields['le_shop_discount_currency'] !== $context->getCurrency()->getIsoCode()) {
+                return $this->error('Deze kortingsbeloning is niet beschikbaar in de gekozen valuta.');
+            }
             $cart = $this->carts->getCart($context->getToken(), $context);
             $reason = $this->eligibility->cartError($cart, $context, $type === 'physical') ?? $this->eligibility->productError($product, $context);
             if ($reason) { return $this->error($reason); }
@@ -90,7 +94,7 @@ class ManagedRewardService
                 $this->logger->warning('Loyalty shop: compensating failed cart add', ['sku' => $sku, 'status' => $status]);
             }
             $this->logger->error('Loyalty shop: reward request failed', ['sku' => $sku, 'error' => $exception->getMessage()]);
-            return $this->error('De aanvraag kon niet worden afgerond. Controleer uw beloningen voordat u opnieuw probeert.');
+            return $this->error($exception instanceof LoyaltyFeedUnavailable ? $exception->getMessage() : 'De aanvraag kon niet worden afgerond. Controleer uw beloningen voordat u opnieuw probeert.');
         } finally {
             $this->connection->executeQuery('SELECT RELEASE_LOCK(:name)', ['name' => $lock]);
         }

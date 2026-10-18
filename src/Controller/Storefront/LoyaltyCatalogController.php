@@ -49,6 +49,9 @@ class LoyaltyCatalogController extends StorefrontController
 
     public function feed(Request $request, SalesChannelContext $context): Response
     {
+        if ($this->catalog->usesFeed($context->getSalesChannelId())) {
+            return new Response('Product export is disabled when Loyalty Engage is the source.', 409, ['Cache-Control' => 'private, no-store']);
+        }
         $expected = (string) $this->config->get('shopFeedToken', $context->getSalesChannelId(), '');
         $token = (string) $request->query->get('token', '');
         if (!$this->config->enabled($context->getSalesChannelId()) || strlen($expected) < 32 || !hash_equals($expected, $token)) {

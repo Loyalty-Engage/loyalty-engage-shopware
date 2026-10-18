@@ -90,6 +90,26 @@
         <input-field type="text">
             <name>shopPointsName</name><label>Points name</label><defaultValue>Punten</defaultValue>
         </input-field>
+        <input-field type="single-select">
+            <name>shopProductSource</name><label>Loyalty assortment source</label>
+            <options>
+                <option><id>shopware</id><name>Shopware product selection</name></option>
+                <option><id>loyalty_feed</id><name>Loyalty Engage JSON / NDJSON feed</name></option>
+            </options>
+            <defaultValue>shopware</defaultValue>
+        </input-field>
+        <input-field type="url">
+            <name>shopSourceFeedUrl</name><label>Loyalty Engage assortment feed URL</label>
+            <helpText>Private HTTPS URL on app.loyaltyengage.tech/feed/v1/. Used only in Loyalty Engage feed mode. Physical products are matched by SKU; reward type, coin price and discount values come from this feed.</helpText>
+        </input-field>
+        <input-field type="int">
+            <name>shopSourceFeedTtl</name><label>Source feed cache duration (seconds)</label>
+            <defaultValue>300</defaultValue><min>60</min><max>3600</max>
+        </input-field>
+        <input-field type="textarea">
+            <name>shopVoucherPresentation</name><label>Presentation for vouchers without a Shopware product (JSON)</label>
+            <helpText>Optional map by SKU, for example {"DISCOUNT_PER_10":{"title":"10% korting","image":"https://example.com/voucher.jpg"}}. Without a title, the discount value is used. Prices always come from the source feed.</helpText>
+        </input-field>
         <input-field type="float">
             <name>shopMinimumOrder</name><label>Minimum regular product subtotal</label><defaultValue>0</defaultValue><min>0</min>
         </input-field>

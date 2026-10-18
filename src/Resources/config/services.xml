@@ -4,6 +4,19 @@
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
+        <service id="LoyaltyEngage\Subscriber\LoyaltyShopCacheSubscriber">
+            <tag name="kernel.event_subscriber"/>
+        </service>
+        <service id="LoyaltyEngage\Command\LoyaltyFeedRefreshCommand">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyFeedReader"/>
+            <tag name="console.command"/>
+        </service>
+        <service id="LoyaltyEngage\Service\LoyaltyFeedReader">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="Symfony\Contracts\HttpClient\HttpClientInterface"/>
+            <argument type="service" id="cache.object"/>
+            <argument type="service" id="logger"/>
+        </service>
         <service id="LoyaltyEngage\Service\LoyaltyProductFeed">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
@@ -36,6 +49,7 @@
             <argument type="service" id="language.repository"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
             <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyFeedReader"/>
         </service>
         <service id="LoyaltyEngage\Service\LoyaltyShopEligibility">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>

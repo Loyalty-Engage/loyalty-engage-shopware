@@ -1,0 +1,6 @@
+{"sku":"24-MB01","type":"physical","coin_price":800,"discount_percentage":null,"discount_amount":null,"discount_currency":null}
+{"sku":"24-MB02","type":"physical","coin_price":800,"discount_percentage":null,"discount_amount":null,"discount_currency":null}
+{"sku":"24-MB03","type":"physical","coin_price":800,"discount_percentage":null,"discount_amount":null,"discount_currency":null}
+{"sku":"24-MB05","type":"physical","coin_price":800,"discount_percentage":null,"discount_amount":null,"discount_currency":null}
+{"sku":"DISCOUNT_PER_10","type":"discount_code","coin_price":1050,"discount_percentage":10,"discount_amount":null,"discount_currency":null}
+{"sku":"DISCOUNT_SKU_10","type":"discount_code","coin_price":1000,"discount_percentage":null,"discount_amount":10,"discount_currency":"EUR"}

@@ -6,6 +6,7 @@ use LoyaltyEngage\Service\LoyaltyProductCatalog;
 use LoyaltyEngage\Service\LoyaltyShopEligibility;
 use LoyaltyEngage\Service\LoyaltyShopConfig;
 use LoyaltyEngage\Service\RewardAuthorization;
+use LoyaltyEngage\Service\LoyaltyFeedUnavailable;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Cart\CartValidatorInterface;
 use Shopware\Core\Checkout\Cart\Error\ErrorCollection;
@@ -24,7 +25,7 @@ class LoyaltyShopCartValidator implements CartValidatorInterface
                 && !$this->authorization->valid($item, $context)) {
                 $errors->add(new GenericCartError('le-authorization-' . $item->getId(), 'loyaltyShopBlocked', ['reason' => 'Deze puntenbeloning heeft geen geldige reservering. Verwijder de beloning en voeg deze opnieuw toe.'], 20, true, false, true));
             }
-            if ($item->getType() === 'product' && $item->getPayloadValue('loyaltyFreeProduct') !== true && $this->config->enabled($context->getSalesChannelId())) {
+            if ($item->getType() === 'product' && $item->getPayloadValue('loyaltyFreeProduct') !== true && $this->config->enabled($context->getSalesChannelId()) && !$this->catalog->usesFeed($context->getSalesChannelId())) {
                 $product = $this->catalog->find((string) $item->getPayloadValue('productNumber'), $context);
                 $fields = $product ? $this->catalog->fields($product) : [];
                 if (($fields['le_shop_regular_purchase'] ?? true) === false) {
@@ -32,9 +33,13 @@ class LoyaltyShopCartValidator implements CartValidatorInterface
                 }
             }
             if ($item->getPayloadValue('leManagedReward') !== true) { continue; }
-            $product = $this->catalog->find((string) $item->getPayloadValue('productNumber'), $context);
-            $reason = $this->eligibility->cartError($cart, $context);
-            $reason ??= $product ? $this->eligibility->productError($product, $context) : 'Deze loyaltybeloning is niet meer beschikbaar.';
+            try {
+                $product = $this->catalog->find((string) $item->getPayloadValue('productNumber'), $context);
+                $reason = $this->eligibility->cartError($cart, $context);
+                $reason ??= $product ? $this->eligibility->productError($product, $context) : 'Deze loyaltybeloning is niet meer beschikbaar.';
+            } catch (LoyaltyFeedUnavailable $exception) {
+                $reason = $exception->getMessage();
+            }
             if ($item->getQuantity() !== 1) { $reason = 'Loyaltybeloningen moeten per stuk worden toegevoegd.'; }
             if ($reason) {
                 $errors->add(new GenericCartError('le-reward-' . $item->getId(), 'loyaltyShopBlocked', ['reason' => $reason], 20, true, false, true));

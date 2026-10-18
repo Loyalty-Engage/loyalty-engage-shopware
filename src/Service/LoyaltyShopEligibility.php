@@ -41,7 +41,7 @@ class LoyaltyShopEligibility
     {
         $error = $this->catalog->validationError($product, $context->getSalesChannelId());
         if ($error) { return $error; }
-        $fields = $this->catalog->fields($product);
+        $fields = $this->catalog->fields($product, $context->getSalesChannelId());
         if (($fields['le_shop_type'] ?? 'physical') === 'physical') {
             if (($product->getMinPurchase() ?? 1) !== 1 || ($product->getPurchaseSteps() ?? 1) !== 1) {
                 return 'Deze beloning moet per stuk bestelbaar zijn.';
@@ -50,7 +50,8 @@ class LoyaltyShopEligibility
                 return 'Deze beloning is niet op voorraad.';
             }
         }
-        if ($this->config->get('shopTiersEnabled', $context->getSalesChannelId(), false)) {
+        if ($this->config->get('shopTiersEnabled', $context->getSalesChannelId(), false)
+            && (!$this->catalog->usesFeed($context->getSalesChannelId()) || $fields['le_shop_tier_id'] !== null)) {
             $tiers = $this->config->tiers($context->getSalesChannelId());
             $customerTier = ($context->getCustomer()?->getCustomFields() ?? [])['le_current_tier'] ?? null;
             $customerRank = false;

@@ -1,0 +1,46 @@
+{% sw_extends '@Storefront/storefront/component/product/card/box-standard.html.twig' %}
+
+{% block component_product_box_name %}
+    {% if product.extensions.leVirtualReward is defined %}
+        <span class="product-name">{{ reward.title }}</span>
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
+
+{% block component_product_box_image %}
+    {% if product.extensions.leVirtualReward is defined %}
+        <div class="product-image-wrapper">
+            {% if reward.image_link %}
+                <img src="{{ reward.image_link }}" class="product-image is-standard" alt="{{ reward.title }}" loading="lazy">
+            {% else %}
+                <div class="product-image-placeholder">{% sw_icon 'placeholder' style {size: 'fluid'} %}</div>
+            {% endif %}
+        </div>
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
+
+{% block component_product_box_price %}
+    <div class="product-price-info">
+        <div class="product-price-wrapper">
+            <span class="product-price">{{ reward.coin_price }} {{ pointsName }}</span>
+        </div>
+        {% if reward.minimum_required_tier_id %}
+            <p class="product-cheapest-price">{{ 'leShop.minimumTier'|trans|sw_sanitize }} {{ reward.minimum_required_tier_id }}</p>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block component_product_box_action %}
+    <div class="product-action">
+        <div class="d-grid">
+            <button type="button" class="btn btn-buy" disabled
+                    data-loyalty-redeem data-sku="{{ reward.id }}" data-type="{{ reward.type }}"
+                    data-price="{{ reward.coin_price }}" data-available="{{ reward.available ? '1' : '0' }}">
+                {{ (reward.available ? 'leShop.redeem' : 'leShop.unavailable')|trans|sw_sanitize }}
+            </button>
+        </div>
+    </div>
+{% endblock %}

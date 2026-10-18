@@ -11,6 +11,12 @@ $plugins = new Shopware\Core\Framework\Plugin\KernelPluginLoader\DbalKernelPlugi
 $kernel = Shopware\Core\Framework\Adapter\Kernel\KernelFactory::create(environment: 'prod', debug: false, classLoader: $loader, pluginLoader: $plugins);
 $kernel->boot();
 $container = $kernel->getContainer();
+$settings = $container->get(Shopware\Core\System\SystemConfig\SystemConfigService::class);
+$previousSource = $settings->get('LoyaltyEngage.config.shopProductSource', $channelId);
+$settings->set('LoyaltyEngage.config.shopProductSource', 'shopware', $channelId);
+register_shutdown_function(static function () use ($settings, $previousSource, $channelId): void {
+    $settings->set('LoyaltyEngage.config.shopProductSource', $previousSource, $channelId);
+});
 function dependency(object $object, string $name) { return (new ReflectionProperty($object, $name))->getValue($object); }
 function ensure(bool $value, string $message): void { if (!$value) { throw new RuntimeException($message); } }
 $controller = $container->get(LoyaltyEngage\Controller\Storefront\LoyaltyShopController::class);
@@ -54,6 +60,9 @@ $anonymous = $factory->create(Shopware\Core\Framework\Uuid\Uuid::randomHex(), $c
 $result = $service->redeem($sku, 'physical', Shopware\Core\Framework\Uuid\Uuid::randomHex(), $anonymous);
 ensure(!$result['success'] && count($requests) === 1, 'Anonymous request makes no reservation');
 $rows = iterator_to_array($feed->rows($anonymous));
+ensure(!array_key_exists('entity', $rows[0]), 'Feed never exposes the storefront product entity');
+$listing = dependency($managed, 'catalog')->listing($anonymous);
+ensure($listing['products'][0]['entity'] instanceof Shopware\Core\Content\Product\ProductEntity, 'Native PLP cards receive a Shopware product entity');
 ensure(count(array_filter($rows, static fn (array $row): bool => str_starts_with($row['id'], 'LE-DEMO-EMPTY-'))) > 0, 'Out-of-stock product stays in the feed');
 $copies = array_values(array_filter($rows, static fn (array $row): bool => $row['id'] === $sku));
 foreach ($copies as $copy) {
