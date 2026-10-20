@@ -4,6 +4,21 @@
         xsi:schemaLocation="http://symfony.com/schema/routing
         https://symfony.com/schema/routing/routing-1.0.xsd">
 
+    <route id="frontend.loyaltyshop.index" path="/loyaltyshop" methods="GET">
+        <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController::index</default>
+        <default key="_routeScope"><list><string>storefront</string></list></default>
+        <default key="_httpCache">false</default>
+    </route>
+    <route id="frontend.loyaltyshop.state" path="/loyaltyshop/state" methods="GET">
+        <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController::state</default>
+        <default key="_routeScope"><list><string>storefront</string></list></default>
+        <default key="XmlHttpRequest">true</default><default key="_httpCache">false</default>
+    </route>
+    <route id="frontend.loyaltyshop.feed" path="/loyaltyshop/feed.ndjson" methods="GET">
+        <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController::feed</default>
+        <default key="_routeScope"><list><string>storefront</string></list></default>
+        <default key="_httpCache">false</default>
+    </route>
     <!-- Storefront routes for the embedded Loyalty Shop widget -->
     <route id="frontend.loyaltyshop.cart.add" path="/loyaltyshop/cart/add" methods="POST">
         <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyShopController::addToCart</default>

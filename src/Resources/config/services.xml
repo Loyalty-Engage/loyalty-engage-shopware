@@ -4,6 +4,87 @@
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
+        <service id="LoyaltyEngage\Subscriber\LoyaltyShopCacheSubscriber">
+            <tag name="kernel.event_subscriber"/>
+        </service>
+        <service id="LoyaltyEngage\Command\LoyaltyFeedRefreshCommand">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyFeedReader"/>
+            <tag name="console.command"/>
+        </service>
+        <service id="LoyaltyEngage\Service\LoyaltyFeedReader">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="Symfony\Contracts\HttpClient\HttpClientInterface"/>
+            <argument type="service" id="cache.object"/>
+            <argument type="service" id="logger"/>
+        </service>
+        <service id="LoyaltyEngage\Service\LoyaltyProductFeed">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="Shopware\Core\System\SalesChannel\Context\SalesChannelContextFactory"/>
+            <argument type="service" id="sales_channel.repository"/>
+        </service>
+        <service id="LoyaltyEngage\Service\RewardAuthorization">
+            <argument>%kernel.secret%</argument>
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+        </service>
+        <service id="LoyaltyEngage\Subscriber\ManagedRewardLifecycleSubscriber">
+            <argument type="service" id="LoyaltyEngage\Service\RewardAuthorization"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+        <service id="LoyaltyEngage\Command\LoyaltyShopDemoCommand">
+            <argument type="service" id="product.repository"/>
+            <argument type="service" id="sales_channel.repository"/>
+            <argument type="service" id="tax.repository"/>
+            <argument type="service" id="cms_page.repository"/>
+            <argument type="service" id="landing_page.repository"/>
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+            <tag name="console.command"/>
+        </service>
+        <service id="LoyaltyEngage\Service\LoyaltyShopConfig">
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+        </service>
+        <service id="LoyaltyEngage\Service\LoyaltyProductCatalog">
+            <argument type="service" id="product.repository"/>
+            <argument type="service" id="language.repository"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyFeedReader"/>
+        </service>
+        <service id="LoyaltyEngage\Service\LoyaltyShopEligibility">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
+        </service>
+        <service id="LoyaltyEngage\Service\ManagedRewardService">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopEligibility"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopService"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+            <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\RewardAuthorization"/>
+        </service>
+        <service id="LoyaltyEngage\Cart\LoyaltyShopCartValidator">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopEligibility"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="LoyaltyEngage\Service\RewardAuthorization"/>
+            <tag name="shopware.cart.validator"/>
+        </service>
+        <service id="LoyaltyEngage\Cms\LoyaltyShopCmsResolver">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <tag name="shopware.cms.data_resolver"/>
+        </service>
+        <service id="LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController" public="true">
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="Shopware\Storefront\Page\GenericPageLoader"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductFeed"/>
+            <call method="setContainer"><argument type="service" id="service_container"/></call>
+            <tag name="controller.service_arguments"/>
+        </service>
         <!-- API Service -->
         <service id="LoyaltyEngage\Service\LoyaltyEngageApiService">
             <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
@@ -17,8 +98,11 @@
             <argument type="service" id="Shopware\Core\Checkout\Cart\CartPersister"/>
             <argument type="service" id="product.repository"/>
             <argument type="service" id="promotion.repository"/>
+            <argument type="service" id="promotion_discount.repository"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="LoyaltyEngage\Service\ManagedRewardService"/>
         </service>
 
         <!-- Loyalty Shop Service (storefront widget) -->
@@ -35,6 +119,8 @@
         <!-- Storefront Controller (loyalty shop widget endpoints) -->
         <service id="LoyaltyEngage\Controller\Storefront\LoyaltyShopController" public="true">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopService"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="LoyaltyEngage\Service\ManagedRewardService"/>
             <call method="setContainer">
                 <argument type="service" id="service_container"/>
             </call>
@@ -93,6 +179,8 @@
              Priority 4950 ensures correct ordering (between 5000 and 4900). -->
         <service id="LoyaltyEngage\Cart\LoyaltyFreeProductProcessor">
             <argument type="service" id="Shopware\Core\Checkout\Cart\Price\QuantityPriceCalculator"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
+            <argument type="service" id="LoyaltyEngage\Service\RewardAuthorization"/>
             <tag name="shopware.cart.processor" priority="4950"/>
         </service>
 

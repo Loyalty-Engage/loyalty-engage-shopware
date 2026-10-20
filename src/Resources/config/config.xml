@@ -83,7 +83,67 @@
     </card>
 
     <card>
+        <title>Native loyalty shop and product feed</title>
+        <input-field type="bool">
+            <name>shopEnabled</name><label>Enable native loyalty shop</label><defaultValue>false</defaultValue>
+        </input-field>
+        <input-field type="text">
+            <name>shopPointsName</name><label>Points name</label><defaultValue>Punten</defaultValue>
+        </input-field>
+        <input-field type="single-select">
+            <name>shopProductSource</name><label>Loyalty assortment source</label>
+            <options>
+                <option><id>shopware</id><name>Shopware product selection</name></option>
+                <option><id>loyalty_feed</id><name>Loyalty Engage JSON / NDJSON feed</name></option>
+            </options>
+            <defaultValue>shopware</defaultValue>
+        </input-field>
+        <input-field type="url">
+            <name>shopSourceFeedUrl</name><label>Loyalty Engage assortment feed URL</label>
+            <helpText>Private HTTPS URL on app.loyaltyengage.tech/feed/v1/. Used only in Loyalty Engage feed mode. Physical products are matched by SKU; reward type, coin price and discount values come from this feed.</helpText>
+        </input-field>
+        <input-field type="int">
+            <name>shopSourceFeedTtl</name><label>Source feed cache duration (seconds)</label>
+            <defaultValue>300</defaultValue><min>60</min><max>3600</max>
+        </input-field>
+        <input-field type="textarea">
+            <name>shopVoucherPresentation</name><label>Presentation for vouchers without a Shopware product (JSON)</label>
+            <helpText>Optional map by SKU, for example {"DISCOUNT_PER_10":{"title":"10% korting","image":"https://example.com/voucher.jpg"}}. Without a title, the discount value is used. Prices always come from the source feed.</helpText>
+        </input-field>
+        <input-field type="float">
+            <name>shopMinimumOrder</name><label>Minimum regular product subtotal</label><defaultValue>0</defaultValue><min>0</min>
+        </input-field>
+        <input-field type="int">
+            <name>shopMaximumRewards</name><label>Maximum rewards per order (0 = unlimited)</label><defaultValue>1</defaultValue><min>0</min>
+        </input-field>
+        <input-field type="bool">
+            <name>shopAllowPromotions</name><label>Allow combination with discount codes</label><defaultValue>true</defaultValue>
+        </input-field>
+        <input-field type="bool">
+            <name>shopTiersEnabled</name><label>Use tiers for loyalty rewards</label><defaultValue>false</defaultValue>
+        </input-field>
+        <input-field type="textarea">
+            <name>shopTiers</name><label>Loyalty Engage tiers, lowest to highest</label>
+            <helpText>One ID|name per line, for example 1|Brons. IDs must match this organization's Loyalty Engage tier IDs. Product minimum tier IDs are required when tiers are enabled.</helpText>
+        </input-field>
+        <input-field type="password">
+            <name>shopFeedToken</name><label>Product feed access token (minimum 32 characters)</label>
+            <helpText>Use a randomly generated secret. Feed: /loyaltyshop/feed.ndjson?token=YOUR_TOKEN on the sales channel domain with the organization's default currency.</helpText>
+        </input-field>
+        <component name="sw-entity-single-select">
+            <name>shopFeedCurrencyId</name><entity>currency</entity>
+            <label>Feed currency (organization default currency)</label>
+            <helpText>Choose the default currency of your Loyalty Engage organization. If empty, the sales channel default currency is used.</helpText>
+        </component>
+    </card>
+    <card>
         <title>SRS Discount Sync</title>
+        <input-field type="bool">
+            <name>srsVoucherCreationEnabled</name>
+            <label>Use SRS for discount code creation</label>
+            <helpText>Creates vouchers through prod.bridge.loyaltyengage.tech using the Loyalty Engage Client ID and Client Secret. Requires SRS Tenant ID. Product SKU must match the bridge voucher_type.</helpText>
+            <defaultValue>false</defaultValue>
+        </input-field>
         <input-field type="bool">
             <name>srsDiscountSyncEnabled</name>
             <label>Enable SRS Discount Sync</label>
@@ -93,7 +153,7 @@
         <input-field type="text">
             <name>srsTenantId</name>
             <label>SRS Tenant ID</label>
-            <helpText>The tenant ID used for SRS voucher status checks (e.g. "105").</helpText>
+            <helpText>Required when SRS voucher creation is enabled. Used for voucher creation, status checks and redemption.</helpText>
         </input-field>
         <input-field type="password">
             <name>srsClientId</name>

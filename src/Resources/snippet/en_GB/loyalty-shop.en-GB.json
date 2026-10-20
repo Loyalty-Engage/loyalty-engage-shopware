@@ -1,0 +1,21 @@
+{
+    "leShop": {
+        "title": "Rewards shop",
+        "login": "Sign in to view your points and redeem rewards.",
+        "balance": "Available:",
+        "balanceNote": "Your balance is synchronized. Loyalty Engage checks your current balance when you redeem a reward.",
+        "rewards": "rewards",
+        "sort": "Sort by",
+        "name": "Name",
+        "apply": "Apply",
+        "redeem": "Redeem points",
+        "unavailable": "Out of stock",
+        "minimumTier": "Minimum tier ID:",
+        "empty": "No rewards are available yet.",
+        "pages": "Reward pages",
+        "javascript": "Enable JavaScript to redeem points.",
+        "insufficient": "You do not have enough points for this reward.",
+        "error": "The request could not be processed. Check your rewards before trying again."
+    },
+    "checkout": { "loyaltyShopBlocked": "%reason%" }
+}

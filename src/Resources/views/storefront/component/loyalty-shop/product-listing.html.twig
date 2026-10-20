@@ -1,0 +1,45 @@
+{% sw_extends '@Storefront/storefront/component/product/listing.html.twig' %}
+
+{# Reuse the theme's PLP blocks without enabling its unrelated AJAX filter endpoint. #}
+{% block product_listing %}
+    <div class="cms-element-product-listing-wrapper loyalty-shop-listing">
+        {{ block('element_product_listing_wrapper_content') }}
+    </div>
+{% endblock %}
+
+{% block element_product_listing_pagination_nav_top %}
+    <div class="listing-pagination">
+        <p class="mb-0">{{ listing.total }} {{ 'leShop.rewards'|trans|sw_sanitize }}</p>
+        {% sw_include '@LoyaltyEngage/storefront/component/loyalty-shop/pagination.html.twig' %}
+    </div>
+{% endblock %}
+
+{% block element_product_listing_sorting %}
+    <form method="get" class="sorting d-flex align-items-center gap-2">
+        <label class="sorting-label" for="{{ loyaltyListingId }}-sort">{{ 'leShop.sort'|trans|sw_sanitize }}</label>
+        <select name="leSort" id="{{ loyaltyListingId }}-sort" class="sorting form-select" aria-label="{{ 'leShop.sort'|trans }}">
+            <option value="name" {% if app.request.query.get('leSort') != 'points' %}selected{% endif %}>{{ 'leShop.name'|trans|sw_sanitize }}</option>
+            <option value="points" {% if app.request.query.get('leSort') == 'points' %}selected{% endif %}>{{ pointsName }}</option>
+        </select>
+        <button type="submit" class="btn btn-outline-primary">{{ 'leShop.apply'|trans|sw_sanitize }}</button>
+    </form>
+{% endblock %}
+
+{% block element_product_listing_col %}
+    {% for reward in listing.products %}
+        <div class="cms-listing-col {{ listingColumns }}" role="listitem">
+            {% block element_product_listing_box %}
+                {% sw_include '@LoyaltyEngage/storefront/component/loyalty-shop/product-card.html.twig' with {
+                    product: reward.entity,
+                    reward: reward,
+                    layout: 'standard',
+                    displayMode: 'standard'
+                } %}
+            {% endblock %}
+        </div>
+    {% endfor %}
+{% endblock %}
+
+{% block element_product_listing_pagination_nav_bottom %}
+    {% sw_include '@LoyaltyEngage/storefront/component/loyalty-shop/pagination.html.twig' %}
+{% endblock %}

@@ -167,13 +167,19 @@ class LoyaltyShopService
         string $email,
         string $sku,
         float $discount,
-        SalesChannelContext $context
+        SalesChannelContext $context,
+        string $fallbackDiscountType = 'percentage',
+        bool $managed = false
     ): array {
         try {
             $result = $this->loyaltyEngageApiService->buyDiscountCodeProduct($email, $sku, $context->getSalesChannelId());
 
             if ($result === null) {
                 return $this->error('Discount code could not be claimed. Please try again.');
+            }
+
+            if (($result['success'] ?? true) === false) {
+                return $this->error($result['message'] ?? 'Discount code could not be claimed.');
             }
 
             // Extract discount code from the API response
@@ -203,7 +209,7 @@ class LoyaltyShopService
                 $promotionDiscountType  = 'absolute';
             } else {
                 $promotionDiscountValue = $apiDiscountPercentage ?? (float) $discount;
-                $promotionDiscountType  = 'percentage';
+                $promotionDiscountType  = $apiDiscountPercentage !== null ? 'percentage' : $fallbackDiscountType;
             }
 
             $this->logger->info('LoyaltyShopService: discount values from API', [
@@ -220,7 +226,8 @@ class LoyaltyShopService
                 $sku,
                 $promotionDiscountValue,
                 $promotionDiscountType,
-                $context
+                $context,
+                $managed
             );
 
             if ($promotionId === null) {
@@ -290,9 +297,10 @@ class LoyaltyShopService
         string $sku,
         float $discountValue,
         string $discountType,
-        SalesChannelContext $context
+        SalesChannelContext $context,
+        bool $managed = false
     ): ?string {
-        $promotionName = self::PROMOTION_NAME_PREFIX . $sku;
+        $promotionName = self::PROMOTION_NAME_PREFIX . $sku . ($managed ? ' [' . $context->getSalesChannelId() . ']' : '');
 
         // Try to find an existing promotion for this SKU
         $criteria = new Criteria();

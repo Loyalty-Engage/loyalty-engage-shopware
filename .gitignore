@@ -22,7 +22,15 @@ yarn-error.log
 /src/Resources/app/administration/dist/
 
 # Test files
-/tests/
+/tests/*
+!/tests/srs-voucher-smoke.php
+!/tests/loyalty-shop-smoke.php
+!/tests/loyalty-shop-integration.php
+!/tests/loyalty-feed-smoke.php
+!/tests/loyalty-feed-integration.php
+!/tests/fixtures/
+/tests/fixtures/*
+!/tests/fixtures/loyalty-products.ndjson
 phpunit.xml
 .phpunit.result.cache
 
