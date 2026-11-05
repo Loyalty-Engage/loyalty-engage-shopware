@@ -270,4 +270,27 @@
             <max>100</max>
         </input-field>
     </card>
+    <card>
+        <title>Frontend personalizations</title>
+        <title lang="nl-NL">Frontend-personalisaties</title>
+        <input-field type="text">
+            <name>personalizationTenant</name>
+            <label>Frontend tenant UUID or official loader snippet</label>
+            <label lang="nl-NL">Frontend tenant-UUID of officiele loader-snippet</label>
+            <helpText>Not your API Client ID. Only the UUID is stored. Allow your storefront domain in Loyalty Engage > Developer > Frontend settings > Allowed domains.</helpText>
+        </input-field>
+        <component name="le-personalization-rules">
+            <name>personalizationRules</name>
+        </component>
+        <component name="sw-entity-single-select">
+            <name>personalizationCurrencyId</name>
+            <entity>currency</entity>
+            <label>Loyalty Engage organization currency (required for cartValue)</label>
+        </component>
+        <input-field type="bool">
+            <name>personalizationDebug</name>
+            <label>Debug frontend personalizations (no personal data)</label>
+            <defaultValue>false</defaultValue>
+        </input-field>
+    </card>
 </config>

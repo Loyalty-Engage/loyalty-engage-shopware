@@ -1,0 +1,6 @@
+{% block block_le_personalization %}
+    {% set element = block.slots.getSlot('content') %}
+    <div class="col-12" data-cms-element-id="{{ element.id }}">
+        {% sw_include '@LoyaltyEngage/storefront/element/cms-element-le-personalization.html.twig' %}
+    </div>
+{% endblock %}

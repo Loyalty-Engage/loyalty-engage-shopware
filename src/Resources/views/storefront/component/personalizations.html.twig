@@ -1,0 +1,29 @@
+{% set personalizations = page.extensions.lePersonalizations %}
+{% set route = app.request.attributes.get('_route') %}
+{% set scope = 'pages' %}
+{% if route == 'frontend.detail.page' %}
+    {% set scope = 'product' %}
+{% elseif route == 'frontend.checkout.cart.page' %}
+    {% set scope = 'cart' %}
+{% elseif route in ['frontend.checkout.confirm.page', 'frontend.checkout.register.page'] %}
+    {% set scope = 'checkout' %}
+{% endif %}
+{% if personalizations.tenant and personalizations.rules|length %}
+    {% set bootstrap = {
+        tenant: personalizations.tenant,
+        rules: personalizations.rules,
+        debug: personalizations.debug,
+        scope: scope,
+        cmsPage: page.cmsPage.id|default(''),
+        product: scope == 'product' ? page.product.id : '',
+        contextUrl: path('frontend.loyalty.personalization.context')
+    } %}
+    <div hidden data-le-personalization-config="{{ bootstrap|json_encode|escape('html_attr') }}"></div>
+    {% for rule in personalizations.rules %}
+        {% if rule.placement == 'automatic' and rule.page_scope == scope %}
+            {% if scope != 'pages' or page.cmsPage.id in rule.pages %}
+                <div class="container le-personalization" id="le-personalization-auto-{{ rule.key }}" data-le-personalization="{{ rule.key }}" data-le-personalization-placement="automatic"></div>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+{% endif %}

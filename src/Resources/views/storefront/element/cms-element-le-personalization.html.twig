@@ -1,0 +1,5 @@
+{% block element_le_personalization %}
+    {% set key = element.config.personalizationKey.value %}
+    {# The runtime only triggers configured, enabled manual rules; no scripts or private data in CMS HTML. #}
+    <div class="cms-element-le-personalization" id="le-personalization-cms-{{ element.id }}" data-le-personalization="{{ key }}"></div>
+{% endblock %}

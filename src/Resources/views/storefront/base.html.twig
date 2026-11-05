@@ -1,0 +1,6 @@
+{% sw_extends '@Storefront/storefront/base.html.twig' %}
+
+{% block base_main_inner %}
+    {% sw_include '@LoyaltyEngage/storefront/component/personalizations.html.twig' %}
+    {{ parent() }}
+{% endblock %}

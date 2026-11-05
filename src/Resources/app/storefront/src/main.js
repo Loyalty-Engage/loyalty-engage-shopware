@@ -2,6 +2,9 @@
 import LoyaltyCartPlugin from './js/loyalty-cart';
 import './js/custom-header';
 import NativeLoyaltyShop from './js/native-loyalty-shop';
+import { startPersonalizations } from './js/personalizations';
+
+startPersonalizations();
 
 const PluginManager = window.PluginManager;
 

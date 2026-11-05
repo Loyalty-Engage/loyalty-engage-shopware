@@ -4,6 +4,12 @@
         xsi:schemaLocation="http://symfony.com/schema/routing
         https://symfony.com/schema/routing/routing-1.0.xsd">
 
+    <route id="frontend.loyalty.personalization.context" path="/loyalty/personalizations/context" methods="GET">
+        <default key="_controller">LoyaltyEngage\Controller\Storefront\PersonalizationController::context</default>
+        <default key="_routeScope"><list><string>storefront</string></list></default>
+        <default key="XmlHttpRequest">true</default>
+        <default key="_httpCache">false</default>
+    </route>
     <route id="frontend.loyaltyshop.index" path="/loyaltyshop" methods="GET">
         <default key="_controller">LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController::index</default>
         <default key="_routeScope"><list><string>storefront</string></list></default>

@@ -1,0 +1,6 @@
+framework:
+    messenger:
+        failure_transport: failed
+        transports:
+            async: doctrine://default
+            failed: doctrine://default?queue_name=failed

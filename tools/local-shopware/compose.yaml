@@ -1,0 +1,67 @@
+name: loyalty-shopware-source
+
+services:
+  database:
+    image: mysql:8.0
+    command: ["--log-bin-trust-function-creators=1"]
+    environment:
+      MYSQL_ROOT_PASSWORD: local-root-only
+      MYSQL_DATABASE: shopware
+      MYSQL_USER: shopware
+      MYSQL_PASSWORD: local-shopware-only
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  shopware:
+    build: .
+    ports:
+      - "127.0.0.1:8081:80"
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_URL: http://shopware.test:8081
+      APP_SECRET: local-source-test-not-a-production-secret
+      INSTANCE_ID: 804bd81ba77e42eea70c53e62eadf4ae
+      DATABASE_URL: mysql://shopware:local-shopware-only@database:3306/shopware
+      MAILER_DSN: null://null
+      MESSENGER_TRANSPORT_DSN: doctrine://default
+      LOCK_DSN: flock
+      BLUE_GREEN_DEPLOYMENT: "0"
+      OPENSEARCH_URL: http://127.0.0.1:9200
+      SHOPWARE_ES_ENABLED: "0"
+      SHOPWARE_ES_INDEXING_ENABLED: "0"
+      SHOPWARE_ES_INDEX_PREFIX: local-source
+      SHOPWARE_ES_THROW_EXCEPTION: "0"
+      STOREFRONT_PROXY_URL: ""
+      SHOPWARE_HTTP_CACHE_ENABLED: "0"
+      SHOPWARE_HTTP_DEFAULT_TTL: "0"
+      COMPOSER_HOME: /tmp/composer
+    volumes:
+      - ${SHOPWARE_SOURCE:-../../../../..}:/source:ro
+      - application:/var/www/html
+      - ../..:/var/www/html/custom/plugins/LoyaltyEngage
+      - ./messenger.yaml:/var/www/html/config/packages/messenger.yaml:ro
+    depends_on:
+      database:
+        condition: service_healthy
+
+  assets:
+    image: node:18.17.1-alpine
+    profiles: [tools]
+    working_dir: /var/www/html
+    environment:
+      PROJECT_ROOT: /var/www/html
+      NODE_OPTIONS: --openssl-legacy-provider
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+    volumes:
+      - application:/var/www/html
+      - ../..:/var/www/html/custom/plugins/LoyaltyEngage
+
+volumes:
+  database:
+  application:
