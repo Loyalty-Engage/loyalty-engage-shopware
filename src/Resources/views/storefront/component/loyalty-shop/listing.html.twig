@@ -1,0 +1,23 @@
+<section data-native-loyalty-shop
+         data-state-url="{{ path('frontend.loyaltyshop.state') }}"
+         data-cart-url="{{ path('frontend.loyaltyshop.cart.add') }}"
+         data-discount-url="{{ path('frontend.loyaltyshop.discount.claim') }}"
+         data-points-name="{{ pointsName }}"
+         data-error-message="{{ 'leShop.error'|trans }}"
+         data-balance-message="{{ 'leShop.balance'|trans }}"
+         data-insufficient-message="{{ 'leShop.insufficient'|trans }}">
+    <div class="alert alert-info" data-loyalty-balance role="status">
+        <a href="{{ path('frontend.account.login.page') }}">{{ 'leShop.login'|trans|sw_sanitize }}</a>
+    </div>
+    <p class="text-muted">{{ 'leShop.balanceNote'|trans|sw_sanitize }}</p>
+    <div class="alert d-none" data-loyalty-message role="status" aria-live="polite"></div>
+    {% if listing.error|default(null) %}
+        <div class="alert alert-warning" role="alert">{{ listing.error }}</div>
+    {% endif %}
+    {% sw_include '@LoyaltyEngage/storefront/component/loyalty-shop/product-listing.html.twig' with {
+        loyaltyListingId: 'loyalty-' ~ (element.id|default('page')),
+        searchResult: {total: listing.total, limit: 24, criteria: {offset: (listing.page - 1) * 24, limit: 24}},
+        listingColumns: 'col-sm-6 col-lg-4 col-xl-3'
+    } %}
+    <noscript><p>{{ 'leShop.javascript'|trans|sw_sanitize }}</p></noscript>
+</section>

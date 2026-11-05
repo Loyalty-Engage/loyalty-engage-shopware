@@ -13,7 +13,7 @@ class LoyaltyEngageApiService
     private const HTTP_OK = 200;
     private const DEFAULT_API_URL = 'https://app.loyaltyengage.tech';
     private const REQUIRED_API_BASE = 'https://app.loyaltyengage.tech';
-    private const SRS_BRIDGE_URL = 'https://dev.bridge.loyaltyengage.tech';
+    private const SRS_BRIDGE_URL = 'https://prod.bridge.loyaltyengage.tech';
 
     /**
      * @var SystemConfigService
@@ -96,43 +96,48 @@ class LoyaltyEngageApiService
     /**
      * Check if SRS Discount Sync is enabled
      */
-    public function isSrsDiscountSyncEnabled(): bool
+    public function isSrsDiscountSyncEnabled(?string $salesChannelId = null): bool
     {
-        return (bool) $this->systemConfigService->get('LoyaltyEngage.config.srsDiscountSyncEnabled');
+        return (bool) $this->getConfigValueWithFallback('LoyaltyEngage.config.srsDiscountSyncEnabled', $salesChannelId);
+    }
+
+    public function isSrsVoucherCreationEnabled(?string $salesChannelId = null): bool
+    {
+        return (bool) $this->getConfigValueWithFallback('LoyaltyEngage.config.srsVoucherCreationEnabled', $salesChannelId);
     }
 
     /**
      * Get SRS Tenant ID from config
      */
-    public function getSrsTenantId(): ?string
+    public function getSrsTenantId(?string $salesChannelId = null): ?string
     {
-        return $this->systemConfigService->get('LoyaltyEngage.config.srsTenantId');
+        return $this->getConfigValueWithFallback('LoyaltyEngage.config.srsTenantId', $salesChannelId);
     }
 
     /**
      * Get SRS platform key from config.
      */
-    public function getSrsPlatformKey(): ?string
+    public function getSrsPlatformKey(?string $salesChannelId = null): ?string
     {
-        return $this->systemConfigService->get('LoyaltyEngage.config.srsPlatformKey');
+        return $this->getConfigValueWithFallback('LoyaltyEngage.config.srsPlatformKey', $salesChannelId);
     }
 
     /**
      * Get SRS branch/filiaal ID from config.
      */
-    public function getSrsBranchId(): ?string
+    public function getSrsBranchId(?string $salesChannelId = null): ?string
     {
-        return $this->systemConfigService->get('LoyaltyEngage.config.srsBranchId') ?: '1';
+        return $this->getConfigValueWithFallback('LoyaltyEngage.config.srsBranchId', $salesChannelId) ?: '1';
     }
 
     /**
      * Check if enough SRS redeem configuration is present to call the bridge.
      */
-    public function canRedeemSrsVoucher(): bool
+    public function canRedeemSrsVoucher(?string $salesChannelId = null): bool
     {
-        return !empty($this->getSrsTenantId())
-            && !empty($this->getSrsPlatformKey())
-            && !empty($this->getSrsBranchId());
+        return !empty($this->getSrsTenantId($salesChannelId))
+            && !empty($this->getSrsPlatformKey($salesChannelId))
+            && !empty($this->getSrsBranchId($salesChannelId));
     }
 
     /**
@@ -141,9 +146,9 @@ class LoyaltyEngageApiService
      * Returns the decoded response array on success, or an empty array on failure.
      * The caller should check srs_check_success === true && srs_status === 0 for "already redeemed".
      */
-    public function checkSrsVoucherStatus(string $barcode): array
+    public function checkSrsVoucherStatus(string $barcode, ?string $salesChannelId = null): array
     {
-        $tenantId = $this->getSrsTenantId();
+        $tenantId = $this->getSrsTenantId($salesChannelId);
         if (!$tenantId) {
             $this->logger->warning('LoyaltyEngage: SRS Tenant ID not configured, skipping voucher check', [
                 'barcode' => $barcode,
@@ -151,7 +156,7 @@ class LoyaltyEngageApiService
             return [];
         }
 
-        $platformKey = $this->getSrsPlatformKey();
+        $platformKey = $this->getSrsPlatformKey($salesChannelId);
         if (!$platformKey) {
             $this->logger->warning('LoyaltyEngage: SRS Platform Key not configured, skipping voucher check', [
                 'barcode' => $barcode,
@@ -177,7 +182,7 @@ class LoyaltyEngageApiService
 
         try {
             $response   = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getSrsHeaders(),
+                'headers' => $this->getSrsHeaders($salesChannelId),
                 'json'    => $payload,
             ]);
 
@@ -216,11 +221,11 @@ class LoyaltyEngageApiService
     /**
      * Mark a voucher as redeemed in the SRS bridge.
      */
-    public function redeemSrsVoucher(string $barcode): bool
+    public function redeemSrsVoucher(string $barcode, ?string $salesChannelId = null): bool
     {
-        $tenantId = $this->getSrsTenantId();
-        $platformKey = $this->getSrsPlatformKey();
-        $branchId = $this->getSrsBranchId();
+        $tenantId = $this->getSrsTenantId($salesChannelId);
+        $platformKey = $this->getSrsPlatformKey($salesChannelId);
+        $branchId = $this->getSrsBranchId($salesChannelId);
 
         if (!$tenantId || !$platformKey || !$branchId) {
             $this->logger->warning('LoyaltyEngage: SRS redeem skipped due to missing configuration', [
@@ -451,11 +456,11 @@ class LoyaltyEngageApiService
     /**
      * Get default HTTP headers for SRS bridge requests.
      */
-    private function getSrsHeaders(): array
+    private function getSrsHeaders(?string $salesChannelId = null): array
     {
         return [
             'Content-Type' => 'application/json',
-            'X-PLATFORM-KEY' => (string) $this->getSrsPlatformKey(),
+            'X-PLATFORM-KEY' => (string) $this->getSrsPlatformKey($salesChannelId),
         ];
     }
 
@@ -656,6 +661,49 @@ class LoyaltyEngageApiService
     }
 
     /**
+     * Create a voucher through the bridge; never retry through the direct API.
+     */
+    private function createSrsVoucher(string $email, string $sku, ?string $salesChannelId): ?array
+    {
+        $tenant = trim((string) $this->getSrsTenantId($salesChannelId));
+        if ($tenant === '' || empty($this->getTenantId($salesChannelId)) || empty($this->getBearerToken($salesChannelId))) {
+            return ['success' => false, 'message' => 'SRS requires a Tenant ID and Loyalty Engage Client ID and Client Secret.'];
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', self::SRS_BRIDGE_URL . '/api/srs/v1/create-voucher', [
+                'headers' => $this->getDefaultHeaders($salesChannelId),
+                'json' => ['tenant' => $tenant, 'email' => $email, 'voucher_type' => $sku],
+                'timeout' => 35,
+                'max_duration' => 35,
+            ]);
+            $status = $response->getStatusCode();
+            $result = json_decode($response->getContent(false), true);
+            if ($status < 200 || $status >= 300 || !is_array($result) || ($result['success'] ?? false) !== true) {
+                $this->logger->warning('LoyaltyEngage: SRS voucher creation failed', ['status' => $status, 'sku' => $sku]);
+                return ['success' => false, 'message' => ($result['error'] ?? null) === 'insufficient_balance'
+                    ? 'Onvoldoende punten om deze voucher aan te maken.'
+                    : 'De SRS-voucher kon niet worden aangemaakt.'];
+            }
+
+            $code = $result['barcode'] ?? $result['discountCode'] ?? $result['code'] ?? null;
+            $amount = $result['value'] ?? $result['discountAmount'] ?? null;
+            if ((!is_string($code) && !is_int($code)) || (string) $code === '' || !is_numeric($amount) || (float) $amount <= 0) {
+                $this->logger->error('LoyaltyEngage: SRS voucher created but response lacks a valid code or amount', ['sku' => $sku]);
+                return ['success' => false, 'message' => 'De bridge meldt dat de voucher is aangemaakt, maar geeft geen geldige code of waarde terug. Neem contact op voordat u opnieuw probeert.'];
+            }
+
+            $result['discountCode'] = (string) $code;
+            $result['discountAmount'] = (float) $amount;
+            $result['discountPercentage'] = null;
+            return $result;
+        } catch (TransportExceptionInterface | HttpExceptionInterface $e) {
+            $this->logger->error('LoyaltyEngage: SRS voucher request failed', ['sku' => $sku, 'error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'De bridge kon niet worden bereikt. Controleer of de voucher is aangemaakt voordat u opnieuw probeert.'];
+        }
+    }
+
+    /**
      * Buy a discount code product from the loyalty system
      *
      * @param string $email Customer email/identifier
@@ -664,6 +712,10 @@ class LoyaltyEngageApiService
      */
     public function buyDiscountCodeProduct(string $email, string $sku, ?string $salesChannelId = null): ?array
     {
+        if ($this->isSrsVoucherCreationEnabled($salesChannelId)) {
+            return $this->createSrsVoucher($email, $sku, $salesChannelId);
+        }
+
         $url = $this->getValidatedApiUrl() . '/api/v1/loyalty/shop/' . urlencode($email) . '/cart/buy_discount_code';
         $payload = [
             'sku' => $sku
@@ -736,7 +788,7 @@ class LoyaltyEngageApiService
         for ($i = 0; $i < $quantity; $i++) {
             $result = $this->buyDiscountCodeProduct($email, $sku, $salesChannelId);
 
-            if ($result !== null) {
+            if ($result !== null && ($result['success'] ?? true) !== false) {
                 $successCount++;
                 $results[] = $result;
 
@@ -860,16 +912,16 @@ class LoyaltyEngageApiService
             $success = $statusCode === self::HTTP_OK || $statusCode === 204;
 
             if ($success) {
-                $canRedeemSrs = $this->canRedeemSrsVoucher();
+                $canRedeemSrs = $this->canRedeemSrsVoucher($salesChannelId);
 
                 if ($this->getLoggerStatus()) {
                     $this->logger->info('LoyaltyEngage: redeemDiscountCode SRS redeem decision', [
                         'email'          => $email,
                         'code'           => $code,
                         'canRedeemSrs'   => $canRedeemSrs,
-                        'hasTenantId'    => !empty($this->getSrsTenantId()),
-                        'hasPlatformKey' => !empty($this->getSrsPlatformKey()),
-                        'hasBranchId'    => !empty($this->getSrsBranchId()),
+                        'hasTenantId'    => !empty($this->getSrsTenantId($salesChannelId)),
+                        'hasPlatformKey' => !empty($this->getSrsPlatformKey($salesChannelId)),
+                        'hasBranchId'    => !empty($this->getSrsBranchId($salesChannelId)),
                     ]);
                 }
 
@@ -881,7 +933,7 @@ class LoyaltyEngageApiService
                         ]);
                     }
 
-                    $srsRedeemed = $this->redeemSrsVoucher($code);
+                    $srsRedeemed = $this->redeemSrsVoucher($code, $salesChannelId);
 
                     if ($this->getLoggerStatus()) {
                         $this->logger->info('LoyaltyEngage: redeemDiscountCode finished SRS redeem', [
@@ -901,9 +953,9 @@ class LoyaltyEngageApiService
                     $this->logger->warning('LoyaltyEngage: redeemDiscountCode skipped SRS redeem because configuration is incomplete', [
                         'email' => $email,
                         'code'  => $code,
-                        'hasTenantId'    => !empty($this->getSrsTenantId()),
-                        'hasPlatformKey' => !empty($this->getSrsPlatformKey()),
-                        'hasBranchId'    => !empty($this->getSrsBranchId()),
+                        'hasTenantId'    => !empty($this->getSrsTenantId($salesChannelId)),
+                        'hasPlatformKey' => !empty($this->getSrsPlatformKey($salesChannelId)),
+                        'hasBranchId'    => !empty($this->getSrsBranchId($salesChannelId)),
                     ]);
                 }
             }

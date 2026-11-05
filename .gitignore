@@ -20,9 +20,26 @@ yarn-error.log
 # Build artifacts
 /src/Resources/app/storefront/dist/
 /src/Resources/app/administration/dist/
+/src/Resources/public/administration/
 
 # Test files
-/tests/
+/tests/*
+!/tests/srs-voucher-smoke.php
+!/tests/loyalty-shop-smoke.php
+!/tests/loyalty-shop-integration.php
+!/tests/loyalty-feed-smoke.php
+!/tests/loyalty-feed-integration.php
+!/tests/personalizations-smoke.php
+!/tests/personalizations-storefront.cjs
+!/tests/personalizations-context.php
+!/tests/personalizations-integration.php
+!/tests/personalizations-templates.php
+!/tests/personalizations-admin.cjs
+!/tests/personalizations-http.cjs
+!/tests/fixtures/
+/tests/fixtures/*
+!/tests/fixtures/loyalty-products.ndjson
+!/tests/fixtures/personalization-loader.html
 phpunit.xml
 .phpunit.result.cache
 

@@ -75,6 +75,10 @@ class FreeProductRemoveSubscriber implements EventSubscriberInterface
                 return;
             }
 
+            if (($payload['leManagedReward'] ?? false) === true) {
+                return;
+            }
+
             // Dispatch a delayed removeAllItems message.
             // The delay batches rapid successive removals into a single API call,
             // preventing rate-limiting on the LoyaltyEngage delete endpoint.

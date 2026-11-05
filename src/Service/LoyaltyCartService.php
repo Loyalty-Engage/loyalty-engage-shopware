@@ -76,7 +76,9 @@ class LoyaltyCartService
         EntityRepository $promotionRepository,
         EntityRepository $promotionDiscountRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        private readonly LoyaltyShopConfig $shopConfig,
+        private readonly ManagedRewardService $managedRewards
     ) {
         $this->cartService = $cartService;
         $this->cartPersister = $cartPersister;
@@ -114,6 +116,10 @@ class LoyaltyCartService
 
             // Resolve the SKU (productNumber) to pass to the LoyaltyEngage API
             $sku = $product->getProductNumber();
+
+            if ($this->shopConfig->enabled($context->getSalesChannelId())) {
+                return $this->managedRewards->redeem($sku, 'physical', \Shopware\Core\Framework\Uuid\Uuid::randomHex(), $context);
+            }
 
             // Check with loyalty API BEFORE adding to cart — if the customer does not have
             // enough points the product must NOT be added to the Shopware cart.

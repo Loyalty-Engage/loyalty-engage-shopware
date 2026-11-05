@@ -1,0 +1,21 @@
+{
+    "leShop": {
+        "title": "Puntenwinkel",
+        "login": "Log in om uw punten te bekijken en beloningen in te wisselen.",
+        "balance": "Beschikbaar:",
+        "balanceNote": "Uw saldo wordt gesynchroniseerd. Bij het inwisselen controleert Loyalty Engage uw actuele tegoed.",
+        "rewards": "beloningen",
+        "sort": "Sorteren op",
+        "name": "Naam",
+        "apply": "Toepassen",
+        "redeem": "Punten inwisselen",
+        "unavailable": "Niet op voorraad",
+        "minimumTier": "Minimaal tier-ID:",
+        "empty": "Er zijn nog geen beloningen beschikbaar.",
+        "pages": "Beloningspagina's",
+        "javascript": "Schakel JavaScript in om punten in te wisselen.",
+        "insufficient": "U heeft onvoldoende punten voor deze beloning.",
+        "error": "De aanvraag kon niet worden verwerkt. Controleer uw beloningen voordat u opnieuw probeert."
+    },
+    "checkout": { "loyaltyShopBlocked": "%reason%" }
+}

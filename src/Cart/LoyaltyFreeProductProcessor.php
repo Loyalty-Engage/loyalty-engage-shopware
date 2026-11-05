@@ -2,6 +2,9 @@
 
 namespace LoyaltyEngage\Cart;
 
+use LoyaltyEngage\Service\LoyaltyShopConfig;
+use LoyaltyEngage\Service\RewardAuthorization;
+
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Cart\CartBehavior;
 use Shopware\Core\Checkout\Cart\CartProcessorInterface;
@@ -24,7 +27,7 @@ class LoyaltyFreeProductProcessor implements CartProcessorInterface
 {
     private QuantityPriceCalculator $calculator;
 
-    public function __construct(QuantityPriceCalculator $calculator)
+    public function __construct(QuantityPriceCalculator $calculator, private readonly LoyaltyShopConfig $config, private readonly RewardAuthorization $authorization)
     {
         $this->calculator = $calculator;
     }
@@ -40,6 +43,8 @@ class LoyaltyFreeProductProcessor implements CartProcessorInterface
             if (!$this->isLoyaltyFreeProduct($lineItem)) {
                 continue;
             }
+            if (($lineItem->getPayloadValue('leManagedReward') === true || $this->config->enabled($context->getSalesChannelId()))
+                && !$this->authorization->valid($lineItem, $context)) { continue; }
 
             // Build a zero-price definition using the existing tax rules
             // (tax rules are already set by the standard product processor)

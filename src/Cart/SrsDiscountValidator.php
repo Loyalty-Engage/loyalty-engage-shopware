@@ -54,7 +54,7 @@ class SrsDiscountValidator implements CartValidatorInterface
     public function validate(Cart $cart, ErrorCollection $errors, SalesChannelContext $context): void
     {
         // Only run when SRS Discount Sync is enabled
-        if (!$this->loyaltyEngageApiService->isSrsDiscountSyncEnabled()) {
+        if (!$this->loyaltyEngageApiService->isSrsDiscountSyncEnabled($context->getSalesChannelId())) {
             return;
         }
 
@@ -108,7 +108,7 @@ class SrsDiscountValidator implements CartValidatorInterface
             }
 
             // This is a LoyaltyEngage code — check SRS status
-            $srsResult = $this->loyaltyEngageApiService->checkSrsVoucherStatus($promotionCode);
+            $srsResult = $this->loyaltyEngageApiService->checkSrsVoucherStatus($promotionCode, $context->getSalesChannelId());
             $blockReason    = $this->loyaltyEngageApiService->getVoucherBlockStateFromSrsResult($srsResult);
 
             $this->logger->warning('SrsDiscountValidator: SRS voucher status result', [

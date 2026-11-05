@@ -50,7 +50,7 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
     public function onBeforeLineItemAdded(BeforeLineItemAddedEvent $event): void
     {
         // Only run when SRS Discount Sync is enabled
-        if (!$this->loyaltyEngageApiService->isSrsDiscountSyncEnabled()) {
+        if (!$this->loyaltyEngageApiService->isSrsDiscountSyncEnabled($event->getSalesChannelContext()->getSalesChannelId())) {
             return;
         }
 
@@ -87,7 +87,7 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
             'promotionName' => $promotionName,
         ]);
 
-        $srsResult = $this->loyaltyEngageApiService->checkSrsVoucherStatus($promotionCode);
+        $srsResult = $this->loyaltyEngageApiService->checkSrsVoucherStatus($promotionCode, $event->getSalesChannelContext()->getSalesChannelId());
         $blockReason = $this->loyaltyEngageApiService->getVoucherBlockStateFromSrsResult($srsResult);
 
         $this->logger->warning('SrsDiscountAddedSubscriber: SRS result', [
