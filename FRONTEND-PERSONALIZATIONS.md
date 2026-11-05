@@ -108,6 +108,20 @@ and session isolation via real HTTP, and restores its settings/deletes its fixtu
 on normal completion or a PHP exception. Do not kill the test or stop Docker mid-run;
 after a hard interruption, check its temporary QA records and restore the test rules.
 
+The same real storefront checks can run from the host via the local Admin API, without
+`docker exec` or a particular PHP installation:
+
+```sh
+SHOPWARE_QA_PASSWORD=LOCAL_ADMIN_PASSWORD node tests/personalizations-http.cjs SALES_CHANNEL_ID --confirm-local
+```
+
+This accepts only localhost:8081 or shopware.test:8081. It clears the local cache,
+creates isolated CMS/customer/product fixtures, tests real storefront cookie sessions
+and non-empty-cart checkout, and restores its original rules/currency before deleting
+its own fixtures. No browser JavaScript runs and no external loyalty API is contacted.
+An optional `SHOPWARE_QA_BROWSER=1` pause exposes the temporary CMS URL for a separately
+authorized manual browser check; it times out and cleans up after three minutes.
+
 ### Release Verification, 2026-11-05
 
 - Passed: configuration/context smoke tests, Twig scope and CMS-slot tests, DOM queue
@@ -119,6 +133,16 @@ after a hard interruption, check its temporary QA records and restore the test r
 - Reviewed the official Shopware 6.7.8.2 selector source and added its `value` /
   `update:value` binding alongside the 6.5 `ids` / `change` binding. A complete
   Shopware 6.7 runtime test has not been performed for this feature.
-- Pending: finish the real HTTP integration suite and repeat the browser render
-  after the review hardening. Docker stopped responding during this verification.
-  Publication must wait for those checks and the required GitHub approval.
+- Passed after review fixes: real HTTP suite via the local Admin API. Product, manual
+  CMS, repeated slots, selected landing-page placement, empty/non-empty cart, checkout
+  registration/confirmation, exact cartValue, two authenticated identities and public
+  HTML isolation all passed. Original settings and own fixtures were restored/removed.
+- Fixed during real testing: CMS-based pages override `base_main_inner`, so the
+  integration uses the stable `base_main` block. Landing pages use their nested CMS
+  page ID for both scope matching and the frontend bootstrap.
+- Recompiled the existing local theme through the Admin API and repeated the real
+  product-page render after hardening: visible content, one loader, no browser errors.
+- Pending before publication: full Shopware 6.7 runtime verification and code-owner
+  approval. An additional real-provider multi-target CMS browser check requires
+  explicit authorization; server-rendered CMS targets and client lifecycle tests pass.
+  Docker CLI management remains unresponsive; no other containers were restarted.

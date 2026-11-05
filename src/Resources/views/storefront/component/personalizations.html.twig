@@ -1,5 +1,6 @@
 {% set personalizations = page.extensions.lePersonalizations %}
 {% set route = app.request.attributes.get('_route') %}
+{% set cmsPageId = page.cmsPage.id|default(page.landingPage.cmsPageId|default('')) %}
 {% set scope = 'pages' %}
 {% if route == 'frontend.detail.page' %}
     {% set scope = 'product' %}
@@ -14,14 +15,14 @@
         rules: personalizations.rules,
         debug: personalizations.debug,
         scope: scope,
-        cmsPage: page.cmsPage.id|default(''),
+        cmsPage: cmsPageId,
         product: scope == 'product' ? page.product.id : '',
         contextUrl: path('frontend.loyalty.personalization.context')
     } %}
     <div hidden data-le-personalization-config="{{ bootstrap|json_encode|escape('html_attr') }}"></div>
     {% for rule in personalizations.rules %}
         {% if rule.placement == 'automatic' and rule.page_scope == scope %}
-            {% if scope != 'pages' or page.cmsPage.id in rule.pages %}
+            {% if scope != 'pages' or cmsPageId in rule.pages %}
                 <div class="container le-personalization" id="le-personalization-auto-{{ rule.key }}" data-le-personalization="{{ rule.key }}" data-le-personalization-placement="automatic"></div>
             {% endif %}
         {% endif %}

@@ -26,6 +26,8 @@
 - Replaced targets and duplicate placements retain separate identities; stale
   context requests are cancelled and independent public rules survive context failure.
 - Shopware 6.5/6.7 administration selector bindings are supported.
+- Personalization bootstrap survives CMS pages overriding inner layout blocks;
+  selected landing pages use the correct nested CMS page identifier.
 
 ## Upgrade Notes
 

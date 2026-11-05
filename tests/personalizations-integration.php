@@ -119,7 +119,7 @@ integrationCheck(in_array('qa-selected', $targets, true) && !in_array('qa-produc
 [$status, $cartHtml] = requestLocal('/checkout/cart', $guest);
 integrationCheck($status === 200 && in_array('qa-cart', targetsFromHtml($cartHtml), true), 'Cart automatic placement');
 [$status, $checkoutHtml] = requestLocal('/checkout/register', $guest);
-integrationCheck($status === 200 && in_array('qa-checkout', targetsFromHtml($checkoutHtml), true), 'Checkout automatic placement');
+integrationCheck($status === 200 && in_array('qa-cart', targetsFromHtml($checkoutHtml), true), 'Empty-cart checkout safely redirects to cart');
 [$status, $body, $headers] = requestLocal('/loyalty/personalizations/context?keys=qa-private&scope=cart', $guest);
 $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR)['context']['qa-private'];
 integrationCheck($status === 200 && !isset($data['identifier']) && $data['cartValue'] === 0, 'Guest has no identifier and an empty cart');

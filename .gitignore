@@ -35,6 +35,7 @@ yarn-error.log
 !/tests/personalizations-integration.php
 !/tests/personalizations-templates.php
 !/tests/personalizations-admin.cjs
+!/tests/personalizations-http.cjs
 !/tests/fixtures/
 /tests/fixtures/*
 !/tests/fixtures/loyalty-products.ndjson
