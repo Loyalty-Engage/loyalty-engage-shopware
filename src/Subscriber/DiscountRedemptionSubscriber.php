@@ -16,7 +16,7 @@ use Psr\Log\LoggerInterface;
  * When an order is placed:
  *  1. Find all promotion line items in the order.
  *  2. For each promotion code that belongs to a LoyaltyEngage promotion
- *     (name starts with "LoyaltyEngage: "), mark it as redeemed in the
+ *     (stable voucher identity or legacy name prefix), mark it as redeemed in the
  *     LoyaltyEngage API.
  *  3. Delete the individual code from the Shopware promotion so it cannot
  *     be reused.
@@ -75,6 +75,7 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
             }
 
             $promotionName = (string) ($lineItem->getLabel() ?? '');
+            $loyaltyVoucher = false;
             $codeId = null;
 
             // Prefer the order line item label because the individual code may
@@ -97,13 +98,15 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
                     $promotion = $vars['promotion'] ?? null;
                     if ($promotion !== null && method_exists($promotion, 'getName')) {
                         $promotionName = (string) $promotion->getName();
+                        $fields = $promotion->getCustomFields() ?? [];
+                        $loyaltyVoucher = !empty($fields['le_voucher_identity']);
                     } elseif ($promotion !== null && is_array($promotion)) {
                         $promotionName = (string) ($promotion['name'] ?? '');
                     }
                 }
             }
 
-            if (!str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
+            if (!$loyaltyVoucher && !str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
                 continue;
             }
 

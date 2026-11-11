@@ -2,7 +2,7 @@
 
 // Local disposable environment only. No requests are made to Loyalty Engage.
 // php tests/personalizations-integration.php /var/www/html SALES_CHANNEL_ID --confirm-local
-if (($argv[3] ?? '') !== '--confirm-local') { throw new RuntimeException('Explicit local test confirmation required.'); }
+if (($argv[3] ?? '') !== '--confirm-local' || !in_array(getenv('APP_URL'), ['http://shopware.test:8081', 'http://localhost:8082'], true)) { throw new RuntimeException('Explicit local test confirmation required.'); }
 $root = $argv[1];
 $channel = $argv[2];
 $loader = require $root . '/vendor/autoload.php';
@@ -23,9 +23,10 @@ $db = Shopware\Core\Kernel::getConnection();
 $channelRow = $db->fetchAssociative('SELECT LOWER(HEX(currency_id)) currency, LOWER(HEX(customer_group_id)) customerGroup, LOWER(HEX(payment_method_id)) payment FROM sales_channel WHERE id = UNHEX(?)', [$channel]);
 if (!$channelRow) { throw new RuntimeException('Local sales channel not found.'); }
 $previous = [];
-foreach (['personalizationRules', 'personalizationCurrencyId'] as $key) {
+foreach (['personalizationRules', 'personalizationCurrencyId', 'personalizationTenant'] as $key) {
     $previous[$key] = $settings->get('LoyaltyEngage.config.' . $key, $channel);
 }
+$settings->set('LoyaltyEngage.config.personalizationTenant', '804bd81b-a77e-42ee-a70c-53e62eadf4ae', $channel);
 $customerIds = [];
 $pageIds = [];
 $landingIds = [];
@@ -42,7 +43,7 @@ function requestLocal(string $path, string $jar, ?array $post = null, int $redir
 {
     $headers = [];
     $curl = curl_init('http://127.0.0.1' . $path);
-    $requestHeaders = ['Host: shopware.test:8081'];
+    $requestHeaders = ['Host: ' . parse_url(getenv('APP_URL'), PHP_URL_HOST) . ':' . parse_url(getenv('APP_URL'), PHP_URL_PORT)];
     if (str_starts_with($path, '/loyalty/personalizations/context') || $post !== null) {
         $requestHeaders[] = 'X-Requested-With: XMLHttpRequest';
     }

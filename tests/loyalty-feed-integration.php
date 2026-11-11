@@ -3,9 +3,25 @@
 // Run in the existing local demo environment with its source URL configured.
 // Reservation and voucher APIs are mocked. Native cart validation may read the source feed.
 require __DIR__ . '/loyalty-shop-integration.php';
-$settings->set('LoyaltyEngage.config.shopProductSource', 'loyalty_feed', $channelId);
 $catalogRoot = dependency($managed, 'catalog');
-$config = dependency($catalogRoot, 'config');
+$feedSettings = new class($settings) extends Shopware\Core\System\SystemConfig\SystemConfigService {
+    public function __construct(private readonly Shopware\Core\System\SystemConfig\SystemConfigService $original) {}
+    public function get(string $key, ?string $salesChannelId = null) {
+        if ($key === 'LoyaltyEngage.config.shopProductSource') { return 'loyalty_feed'; }
+        if ($key === 'LoyaltyEngage.config.shopSourceFeedUrl') { return 'https://app.loyaltyengage.tech/feed/v1/local-test/fixture.ndjson'; }
+        return $this->original->get($key, $salesChannelId);
+    }
+};
+$config = new LoyaltyEngage\Service\LoyaltyShopConfig($feedSettings);
+// The fixture SKU must exist in Shopware; never depend on a previous customer's demo catalog.
+$fixtureProduct = Shopware\Core\Framework\Uuid\Uuid::randomHex();
+$tax = $connection->fetchOne('SELECT LOWER(HEX(id)) FROM tax LIMIT 1');
+$container->get('product.repository')->create([[
+    'id' => $fixtureProduct, 'productNumber' => '24-MB01', 'name' => 'Disposable feed reward', 'active' => true,
+    'stock' => 20, 'taxId' => $tax, 'price' => [['currencyId' => $sc['currency'], 'gross' => 10, 'net' => 10, 'linked' => false]],
+    'visibilities' => [['salesChannelId' => $channelId, 'visibility' => 30]],
+    'customFields' => ['le_shop_enabled' => true, 'le_shop_coin_price' => 800, 'le_shop_type' => 'physical'],
+]], Shopware\Core\Framework\Context::createDefaultContext());
 $body = file_get_contents(($argv[3] ?? dirname(__DIR__)) . '/tests/fixtures/loyalty-products.ndjson');
 $sourceClient = new Symfony\Component\HttpClient\MockHttpClient(static function () use (&$body) {
     return new Symfony\Component\HttpClient\Response\MockResponse($body);

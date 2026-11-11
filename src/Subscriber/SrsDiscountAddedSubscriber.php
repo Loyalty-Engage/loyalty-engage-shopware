@@ -70,7 +70,8 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $promotionName = $this->resolvePromotionName($promotionCode, $context);
+        $loyaltyVoucher = false;
+        $promotionName = $this->resolvePromotionName($promotionCode, $context, $loyaltyVoucher);
         if ($promotionName === null) {
             $this->logger->warning('SrsDiscountAddedSubscriber: Code not found in Shopware promotions', [
                 'code' => $promotionCode,
@@ -78,7 +79,7 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if (!str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
+        if (!$loyaltyVoucher && !str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
             return;
         }
 
@@ -117,7 +118,7 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
         $cart->markModified();
     }
 
-    private function resolvePromotionName(string $promotionCode, $context): ?string
+    private function resolvePromotionName(string $promotionCode, $context, bool &$loyaltyVoucher): ?string
     {
         $criteria = new Criteria();
         $criteria->addFilter(new EqualsFilter('code', $promotionCode));
@@ -128,7 +129,10 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
         $codeEntity   = $searchResult->first();
 
         if ($codeEntity instanceof Entity) {
-            $promotionName = $this->extractPromotionName($codeEntity->get('promotion'));
+            $promotion = $codeEntity->get('promotion');
+            $fields = $promotion instanceof Entity ? ($promotion->get('customFields') ?? []) : ($promotion['customFields'] ?? []);
+            $loyaltyVoucher = !empty($fields['le_voucher_identity']);
+            $promotionName = $this->extractPromotionName($promotion);
             if ($promotionName !== '') {
                 return $promotionName;
             }
@@ -143,6 +147,7 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
         if (!$promotion instanceof Entity) {
             return null;
         }
+        $loyaltyVoucher = !empty(($promotion->get('customFields') ?? [])['le_voucher_identity']);
 
         $translatedName = (string) $promotion->getTranslation('name');
         if ($translatedName !== '') {

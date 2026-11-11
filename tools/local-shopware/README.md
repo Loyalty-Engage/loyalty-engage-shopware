@@ -67,3 +67,16 @@ Start/stop without removing data:
 docker compose -f tools/local-shopware/compose.yaml stop
 docker compose -f tools/local-shopware/compose.yaml start
 ```
+
+## Isolated 6.7 Compatibility Environment
+
+`compatibility.yaml` uses separate `loyalty-shopware-compat67` volumes and port 8082.
+It reuses the local PHP image but never updates the existing 6.5 source or database.
+`provision-compatibility.sh` installs the official 6.7.16.0 production template in
+the separate application volume. Composer security checks remain enabled. The
+official template currently resolves a vulnerable upstream MCP dependency: see
+`RELEASE-VERIFICATION-2.7.1.md` for the narrowly approved local test exception and
+verification results. Never transfer that exception to production.
+
+The 6.7 asset builder uses Node 22/npm 11.8 via `Dockerfile.assets67`. Export both
+`bundle:dump` and `feature:dump` before building administration/storefront assets.

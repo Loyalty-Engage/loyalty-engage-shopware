@@ -6,7 +6,7 @@ const channel = process.argv[2];
 const origin = process.env.SHOPWARE_QA_ORIGIN || 'http://shopware.test:8081';
 assert.equal(process.argv[3], '--confirm-local');
 assert.match(channel || '', /^[a-f0-9]{32}$/);
-assert.ok(['http://shopware.test:8081', 'http://localhost:8081'].includes(origin), 'Local test origin only');
+assert.ok(['http://shopware.test:8081', 'http://localhost:8081', 'http://localhost:8082'].includes(origin), 'Local test origin only');
 assert.ok(process.env.SHOPWARE_QA_PASSWORD, 'Provide the local administrator password via environment');
 const id = () => randomUUID().replaceAll('-', '');
 const entity = data => data?.attributes ? { id: data.id, ...data.attributes } : data;
@@ -67,6 +67,7 @@ async function create(type, payload) {
     assert.ok(token, 'Local admin authentication');
     const configuration = await api(configPath + '&domain=LoyaltyEngage.config&inherit=false');
     original = { personalizationRules: configuration[prefix + 'personalizationRules'] ?? null,
+        personalizationTenant: configuration[prefix + 'personalizationTenant'] ?? null,
         personalizationCurrencyId: configuration[prefix + 'personalizationCurrencyId'] ?? null };
     await api('/api/_action/cache', 'DELETE');
     const sc = entity((await api(`/api/sales-channel/${channel}`)).data);
@@ -86,7 +87,8 @@ async function create(type, payload) {
         { ...base, key: 'qa-disabled', page_scope: 'product', enabled: false },
         { ...base, key: 'qa-manual', placement: 'manual', page_scope: 'product' },
         { ...base, key: 'qa-selected', page_scope: 'pages', pages: [cmsId] });
-    await setConfig({ personalizationRules: rules, personalizationCurrencyId: sc.currencyId });
+    await setConfig({ personalizationRules: rules, personalizationCurrencyId: sc.currencyId,
+        personalizationTenant: '804bd81b-a77e-42ee-a70c-53e62eadf4ae' });
     const guest = new Map();
     const productPath = '/Demo-speeltje/LE-DEMO-TOY-' + channel.slice(0, 6);
     let response = await page(productPath, guest);

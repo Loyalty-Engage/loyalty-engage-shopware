@@ -61,7 +61,7 @@ $currencies = new class extends EntityRepository {
         $currency = new CurrencyEntity();
         $currency->setId(str_repeat('c', 32));
         $currency->setFactor(1);
-        return new EntitySearchResult('currency', 1, new EntityCollection([$currency]), null, $criteria, $context);
+        return new EntitySearchResult('currency', 1, new Shopware\Core\System\Currency\CurrencyCollection([$currency]), null, $criteria, $context);
     }
 };
 $products = new class extends SalesChannelRepository {
@@ -73,7 +73,7 @@ $products = new class extends SalesChannelRepository {
         $product->setActive(true);
         $product->setCalculatedPrice(contextPrice(120));
         $product->setCalculatedPrices(new PriceCollection([contextPrice(120, 4), contextPrice(96, 5)]));
-        return new EntitySearchResult('product', 1, new EntityCollection([$product]), null, $criteria, $context->getContext());
+        return new EntitySearchResult($product->getApiAlias(), 1, new Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection([$product]), null, $criteria, $context->getContext());
     }
 };
 $carts = new class extends CartService {

@@ -25,6 +25,8 @@ yarn-error.log
 # Test files
 /tests/*
 !/tests/srs-voucher-smoke.php
+!/tests/voucher-promotion-smoke.php
+!/tests/voucher-checkout-integration.php
 !/tests/loyalty-shop-smoke.php
 !/tests/loyalty-shop-integration.php
 !/tests/loyalty-feed-smoke.php

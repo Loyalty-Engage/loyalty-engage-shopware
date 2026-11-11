@@ -1,0 +1,59 @@
+name: loyalty-shopware-compat67
+
+services:
+  database:
+    image: mysql:8.0
+    command: ["--log-bin-trust-function-creators=1"]
+    environment:
+      MYSQL_ROOT_PASSWORD: local-compat-root-only
+      MYSQL_DATABASE: shopware
+      MYSQL_USER: shopware
+      MYSQL_PASSWORD: local-compat-only
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      retries: 40
+  shopware:
+    image: loyalty-shopware-source-shopware:latest
+    command: ["apache2-foreground"]
+    ports:
+      - "127.0.0.1:8082:80"
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_URL: http://localhost:8082
+      APP_SECRET: local-compat-only-not-production
+      DATABASE_URL: mysql://shopware:local-compat-only@database:3306/shopware
+      MAILER_DSN: null://null
+      MESSENGER_TRANSPORT_DSN: doctrine://default
+      LOCK_DSN: flock
+      SHOPWARE_ES_ENABLED: "0"
+      SHOPWARE_ES_INDEXING_ENABLED: "0"
+      SHOPWARE_HTTP_CACHE_ENABLED: "0"
+      COMPOSER_HOME: /tmp/composer-home
+      COMPOSER_ALLOW_SUPERUSER: "1"
+    volumes:
+      - application:/var/www/html
+      - ../..:/var/www/html/custom/plugins/LoyaltyEngage
+    depends_on:
+      database:
+        condition: service_healthy
+  assets:
+    build:
+      context: .
+      dockerfile: Dockerfile.assets67
+    profiles: [tools]
+    working_dir: /var/www/html
+    environment:
+      PROJECT_ROOT: /var/www/html
+      APP_URL: http://localhost:8082
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+    volumes:
+      - application:/var/www/html
+      - ../..:/var/www/html/custom/plugins/LoyaltyEngage
+
+volumes:
+  database:
+  application:
