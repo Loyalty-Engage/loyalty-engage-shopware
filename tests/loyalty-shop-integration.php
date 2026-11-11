@@ -5,12 +5,24 @@
 $root = $argv[1];
 $channelId = $argv[2];
 $loader = require $root . '/vendor/autoload.php';
-(new Symfony\Component\Dotenv\Dotenv())->bootEnv($root . '/.env');
+if (is_file($root . '/.env')) { (new Symfony\Component\Dotenv\Dotenv())->bootEnv($root . '/.env'); }
+if (!in_array(getenv('APP_URL'), ['http://shopware.test:8081', 'http://localhost:8082'], true)) {
+    throw new RuntimeException('Disposable local environment required.');
+}
 $_SERVER['PROJECT_ROOT'] = $root;
 $plugins = new Shopware\Core\Framework\Plugin\KernelPluginLoader\DbalKernelPluginLoader($loader, null, Shopware\Core\Kernel::getConnection());
-$kernel = Shopware\Core\Framework\Adapter\Kernel\KernelFactory::create(environment: 'prod', debug: false, classLoader: $loader, pluginLoader: $plugins);
+if (class_exists(Shopware\Core\Framework\Adapter\Kernel\KernelFactory::class)) {
+    $kernel = Shopware\Core\Framework\Adapter\Kernel\KernelFactory::create(environment: 'prod', debug: false, classLoader: $loader, pluginLoader: $plugins);
+} else {
+    $http = new Shopware\Core\HttpKernel('prod', false, $loader);
+    $http->setPluginLoader($plugins);
+    $kernel = $http->getKernel();
+}
 $kernel->boot();
 $container = $kernel->getContainer();
+$db = Shopware\Core\Kernel::getConnection();
+$db->beginTransaction();
+register_shutdown_function(static function () use ($db): void { if ($db->isTransactionActive()) { $db->rollBack(); } });
 $settings = $container->get(Shopware\Core\System\SystemConfig\SystemConfigService::class);
 $previousSource = $settings->get('LoyaltyEngage.config.shopProductSource', $channelId);
 $settings->set('LoyaltyEngage.config.shopProductSource', 'shopware', $channelId);
@@ -25,8 +37,19 @@ $catalogController = $container->get(LoyaltyEngage\Controller\Storefront\Loyalty
 $feed = dependency($catalogController, 'productFeed');
 $factory = dependency($feed, 'contexts');
 $connection = dependency($managed, 'connection');
-$customerId = $connection->fetchOne('SELECT LOWER(HEX(id)) FROM customer WHERE guest = 0 AND active = 1 LIMIT 1');
-ensure((bool) $customerId, 'A local non-guest customer is needed for the cart integration test.');
+$customerId = Shopware\Core\Framework\Uuid\Uuid::randomHex();
+$addressId = Shopware\Core\Framework\Uuid\Uuid::randomHex();
+$sc = $connection->fetchAssociative('SELECT LOWER(HEX(currency_id)) currency, LOWER(HEX(customer_group_id)) customerGroup, LOWER(HEX(payment_method_id)) payment FROM sales_channel WHERE id = UNHEX(?)', [$channelId]);
+$salutation = $connection->fetchOne('SELECT LOWER(HEX(id)) FROM salutation LIMIT 1');
+$country = $connection->fetchOne('SELECT LOWER(HEX(country_id)) FROM sales_channel_country WHERE sales_channel_id = UNHEX(?) LIMIT 1', [$channelId]);
+$container->get('customer.repository')->create([[
+    'id' => $customerId, 'email' => 'qa-' . $customerId . '@example.test', 'password' => 'Local-QA-only-987!',
+    'firstName' => 'Local', 'lastName' => 'QA', 'customerNumber' => $customerId, 'active' => true, 'guest' => false,
+    'salesChannelId' => $channelId, 'groupId' => $sc['customerGroup'], 'defaultPaymentMethodId' => $sc['payment'],
+    'salutationId' => $salutation, 'defaultBillingAddressId' => $addressId, 'defaultShippingAddressId' => $addressId,
+    'addresses' => [['id' => $addressId, 'firstName' => 'Local', 'lastName' => 'QA', 'salutationId' => $salutation,
+        'countryId' => $country, 'street' => 'Teststraat 1', 'zipcode' => '1234AB', 'city' => 'Test']],
+]], Shopware\Core\Framework\Context::createDefaultContext());
 $context = $factory->create(Shopware\Core\Framework\Uuid\Uuid::randomHex(), $channelId, ['customerId' => $customerId]);
 $requests = [];
 $http = new Symfony\Component\HttpClient\MockHttpClient(static function ($method, $url, $options) use (&$requests) {

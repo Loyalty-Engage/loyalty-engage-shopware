@@ -99,13 +99,11 @@
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
-        <service id="LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController" public="true">
+        <service id="LoyaltyEngage\Controller\Storefront\LoyaltyCatalogController" public="true" autowire="true" autoconfigure="true">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductCatalog"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
             <argument type="service" id="Shopware\Storefront\Page\GenericPageLoader"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyProductFeed"/>
-            <call method="setTwig"><argument type="service" id="twig"/></call>
-            <call method="setContainer"><argument type="service" id="service_container"/></call>
             <tag name="controller.service_arguments"/>
         </service>
         <!-- API Service -->

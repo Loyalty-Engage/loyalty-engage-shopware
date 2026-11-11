@@ -12,6 +12,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\MultiFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\ContainsFilter;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
@@ -222,13 +223,23 @@ class LoyaltyShopService
             ]);
 
             // Find or create the shared promotion for this SKU
-            $promotionId = $this->findOrCreatePromotion(
-                $sku,
-                $promotionDiscountValue,
-                $promotionDiscountType,
-                $context,
-                $managed
-            );
+            try {
+                $promotionId = $this->findOrCreatePromotion(
+                    $sku,
+                    $promotionDiscountValue,
+                    $promotionDiscountType,
+                    $context,
+                    $managed,
+                    $result
+                );
+            } catch (\Throwable $e) {
+                // The API has already spent the coins. Keep the code visible, but never
+                // register/apply it when its Shopware conditions could not be saved.
+                $this->logger->error('LoyaltyShopService: Could not synchronize voucher conditions', [
+                    'sku' => $sku, 'error' => $e->getMessage(),
+                ]);
+                $promotionId = null;
+            }
 
             if ($promotionId === null) {
                 $this->logger->warning('LoyaltyShopService: Could not find or create Shopware promotion', [
@@ -298,14 +309,20 @@ class LoyaltyShopService
         float $discountValue,
         string $discountType,
         SalesChannelContext $context,
-        bool $managed = false
+        bool $managed = false,
+        array $response = []
     ): ?string {
         $promotionName = self::PROMOTION_NAME_PREFIX . $sku . ($managed ? ' [' . $context->getSalesChannelId() . ']' : '');
 
         // Try to find an existing promotion for this SKU
         $criteria = new Criteria();
-        $criteria->addFilter(new EqualsFilter('name', $promotionName));
+        $criteria->addFilter(new MultiFilter(MultiFilter::CONNECTION_OR, [
+            new EqualsFilter('customFields.le_voucher_identity', VoucherPromotionConfig::identity($promotionName)),
+            new EqualsFilter('name', $promotionName),
+        ]));
         $criteria->addAssociation('discounts');
+        $criteria->addAssociation('orderRules');
+        $criteria->addAssociation('translations');
         $criteria->setLimit(1);
 
         $searchResult = $this->promotionRepository->search($criteria, $context->getContext());
@@ -313,6 +330,18 @@ class LoyaltyShopService
 
         if (!empty($existingIds)) {
             $existingId = reset($existingIds);
+            $existing = $searchResult->get($existingId);
+            $rules = $existing->get('orderRules');
+            $translations = $existing->get('translations');
+            $translationIds = [];
+            foreach ($translations ?? [] as $translation) {
+                $translationIds[] = $translation->get('languageId');
+            }
+            $configuration = VoucherPromotionConfig::payload(
+                $existingId, $promotionName, $sku, $response, $context->getContext()->getLanguageId(),
+                $rules ? array_values($rules->getIds()) : [], $translationIds
+            );
+            $this->promotionRepository->update([array_merge(['id' => $existingId], $configuration)], $context->getContext());
 
             // Update the discount value/type if it differs from what the API returned.
             // This fixes promotions that were created with the wrong value (e.g. value=1
@@ -332,7 +361,7 @@ class LoyaltyShopService
         }
 
         // Create a new shared promotion for this SKU
-        return $this->createSharedPromotion($sku, $promotionName, $discountValue, $discountType, $context);
+        return $this->createSharedPromotion($sku, $promotionName, $discountValue, $discountType, $context, $response);
     }
 
     /**
@@ -420,7 +449,8 @@ class LoyaltyShopService
         string $promotionName,
         float $discountValue,
         string $discountType,
-        SalesChannelContext $context
+        SalesChannelContext $context,
+        array $response = []
     ): ?string {
         try {
             if ($discountValue <= 0) {
@@ -466,6 +496,9 @@ class LoyaltyShopService
                 ],
             ];
 
+            $promotionData = array_merge($promotionData, VoucherPromotionConfig::payload(
+                $promotionId, $promotionName, $sku, $response, $context->getContext()->getLanguageId()
+            ));
             $this->promotionRepository->create([$promotionData], $context->getContext());
 
             $this->logger->info('LoyaltyShopService: Created shared promotion for SKU', [
