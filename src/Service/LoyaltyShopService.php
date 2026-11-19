@@ -60,7 +60,8 @@ class LoyaltyShopService
         EntityRepository $promotionRepository,
         EntityRepository $promotionIndividualCodeRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        private readonly RewardAuthorization $authorization
     ) {
         $this->cartService                       = $cartService;
         $this->cartPersister                     = $cartPersister;
@@ -137,6 +138,7 @@ class LoyaltyShopService
             );
             // Mark as loyalty free product so LoyaltyFreeProductProcessor forces price to €0
             $lineItem->setPayloadValue('loyaltyFreeProduct', true);
+            $this->authorization->issueLegacy($lineItem, $sku, $context);
 
             $cart = $this->cartService->getCart($context->getToken(), $context);
             $cart->add($lineItem);

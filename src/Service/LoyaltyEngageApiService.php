@@ -41,7 +41,7 @@ class LoyaltyEngageApiService
         LoggerInterface $logger
     ) {
         $this->systemConfigService = $systemConfigService;
-        $this->httpClient = $httpClient;
+        $this->httpClient = $httpClient->withOptions(['max_redirects' => 0, 'timeout' => 10, 'max_duration' => 20]);
         $this->logger = $logger;
     }
 
@@ -358,7 +358,7 @@ class LoyaltyEngageApiService
      */
     public function getPointsPerEuro(): int
     {
-        return (int) ($this->systemConfigService->get('LoyaltyEngage.config.pointsPerEuro') ?: 1);
+        return max(1, (int) $this->systemConfigService->get('LoyaltyEngage.config.pointsPerEuro'));
     }
 
     /**
@@ -402,17 +402,19 @@ class LoyaltyEngageApiService
     {
         $apiUrl = $this->getApiUrl();
 
-        if (!$apiUrl || strpos($apiUrl, self::REQUIRED_API_BASE) !== 0) {
+        $parts = $apiUrl ? parse_url(trim($apiUrl)) : false;
+        if (!$parts || ($parts['scheme'] ?? '') !== 'https' || ($parts['host'] ?? '') !== 'app.loyaltyengage.tech'
+            || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
+            || (isset($parts['port']) && $parts['port'] !== 443) || !in_array($parts['path'] ?? '', ['', '/'], true)) {
             if ($apiUrl) {
                 $this->logger->warning('LoyaltyEngage: API URL does not match required base, using default', [
-                    'configuredUrl' => $apiUrl,
                     'defaultUrl' => self::DEFAULT_API_URL
                 ]);
             }
             return self::DEFAULT_API_URL;
         }
 
-        return rtrim($apiUrl, '/');
+        return self::REQUIRED_API_BASE;
     }
 
     /**

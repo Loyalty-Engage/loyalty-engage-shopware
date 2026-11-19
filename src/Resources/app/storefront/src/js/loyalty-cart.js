@@ -29,12 +29,17 @@ export default class LoyaltyCartPlugin extends Plugin {
     }
 
     _registerEvents() {
-        document.$emitter.subscribe(COOKIE_CONFIGURATION_UPDATE, this._onCookieConfigurationUpdate.bind(this));
+        if (!this._boundButtons) {
+            this._boundButtons = new WeakSet();
+            document.$emitter.subscribe(COOKIE_CONFIGURATION_UPDATE, this._onCookieConfigurationUpdate.bind(this));
+        }
 
         // Regular add to cart buttons
         const addButtons = DomAccess.querySelectorAll(document, this.options.addToCartButtonSelector, false);
         if (addButtons.length) {
             addButtons.forEach((button) => {
+                if (this._boundButtons.has(button)) return;
+                this._boundButtons.add(button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onAddToCartButtonClick.bind(this));
             });
@@ -44,6 +49,8 @@ export default class LoyaltyCartPlugin extends Plugin {
         const discountButtons = DomAccess.querySelectorAll(document, this.options.claimDiscountButtonSelector, false);
         if (discountButtons.length) {
             discountButtons.forEach((button) => {
+                if (this._boundButtons.has(button)) return;
+                this._boundButtons.add(button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onClaimDiscountButtonClick.bind(this));
             });
@@ -53,6 +60,8 @@ export default class LoyaltyCartPlugin extends Plugin {
         const redeemButtons = DomAccess.querySelectorAll(document, this.options.redeemPointsButtonSelector, false);
         if (redeemButtons.length) {
             redeemButtons.forEach((button) => {
+                if (this._boundButtons.has(button)) return;
+                this._boundButtons.add(button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onRedeemPointsButtonClick.bind(this));
             });
@@ -62,6 +71,8 @@ export default class LoyaltyCartPlugin extends Plugin {
         const removeDiscountButtons = DomAccess.querySelectorAll(document, this.options.removePointsDiscountButtonSelector, false);
         if (removeDiscountButtons.length) {
             removeDiscountButtons.forEach((button) => {
+                if (this._boundButtons.has(button)) return;
+                this._boundButtons.add(button);
                 button.setAttribute('type', 'button');
                 button.addEventListener('click', this._onRemovePointsDiscountButtonClick.bind(this));
             });
@@ -69,7 +80,7 @@ export default class LoyaltyCartPlugin extends Plugin {
     }
 
     _onCookieConfigurationUpdate() {
-        this.init(); // Rebind events if cookie settings change
+        this._registerEvents();
     }
 
     _onAddToCartButtonClick(event) {

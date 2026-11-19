@@ -1,6 +1,5 @@
 // Import your plugin
 import LoyaltyCartPlugin from './js/loyalty-cart';
-import './js/custom-header';
 import NativeLoyaltyShop from './js/native-loyalty-shop';
 import { startPersonalizations } from './js/personalizations';
 

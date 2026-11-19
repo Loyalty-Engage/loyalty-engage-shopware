@@ -3,6 +3,8 @@
 namespace LoyaltyEngage\Subscriber;
 
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
+use LoyaltyEngage\Service\DeliveryOutbox;
+use LoyaltyEngage\Message\VoucherRedemptionMessage;
 use Shopware\Core\Checkout\Cart\Event\CheckoutOrderPlacedEvent;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -32,7 +34,8 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         EntityRepository $promotionIndividualCodeRepository,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        private readonly DeliveryOutbox $outbox
     ) {
         $this->loyaltyEngageApiService           = $loyaltyEngageApiService;
         $this->promotionIndividualCodeRepository = $promotionIndividualCodeRepository;
@@ -119,17 +122,8 @@ class DiscountRedemptionSubscriber implements EventSubscriberInterface
                 ]);
             }
 
-            // 1. Mark as redeemed in LoyaltyEngage API
-            try {
-                $this->loyaltyEngageApiService->redeemDiscountCode($email, $promotionCode, $order->getSalesChannelId());
-            } catch (\Throwable $e) {
-                if ($this->loyaltyEngageApiService->getLoggerStatus()) {
-                    $this->logger->error('DiscountRedemptionSubscriber: Failed to mark code as redeemed in LoyaltyEngage', [
-                        'code'  => $promotionCode,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
+            // Persist remote reconciliation before deleting the local one-use code.
+            $this->outbox->dispatch(new VoucherRedemptionMessage($email, $promotionCode, $order->getSalesChannelId()));
 
             // 2. Delete the individual code from Shopware so it cannot be reused
             if ($codeId !== null) {

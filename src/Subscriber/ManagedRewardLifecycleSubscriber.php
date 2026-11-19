@@ -22,7 +22,8 @@ class ManagedRewardLifecycleSubscriber implements EventSubscriberInterface
     {
         $item = $event->getLineItem();
         $context = $event->getSalesChannelContext();
-        if ($item->getPayloadValue('leManagedReward') !== true || !$this->authorization->valid($item, $context)) { return; }
+        if ($item->getPayloadValue('loyaltyFreeProduct') !== true || !$context->getCustomer()
+            || !$this->authorization->valid($item, $context)) { return; }
         $status = $this->api->removeItem($context->getCustomer()->getEmail(), (string) $item->getPayloadValue('productNumber'), $item->getQuantity(), $context->getSalesChannelId());
         if (!in_array($status, [200, 204], true)) {
             throw new ServiceUnavailableHttpException(null, 'De puntenreservering kon niet worden vrijgegeven. Probeer later opnieuw.');

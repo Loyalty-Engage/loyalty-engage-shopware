@@ -42,6 +42,7 @@ class PurchaseMessage
         $this->orderDate = $orderDate;
         $this->products = $products;
         $this->salesChannelId = $salesChannelId;
+        $this->salesChannelId = $salesChannelId;
     }
 
     /**

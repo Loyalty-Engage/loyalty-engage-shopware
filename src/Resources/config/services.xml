@@ -4,6 +4,16 @@
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
+        <service id="LoyaltyEngage\Service\DeliveryOutbox">
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
+            <argument type="service" id="logger"/>
+        </service>
+        <service id="LoyaltyEngage\Command\DeliveryOutboxCommand">
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+            <tag name="console.command"/>
+        </service>
         <service id="LoyaltyEngage\Service\PersonalizationConfig">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
         </service>
@@ -124,6 +134,7 @@
             <argument type="service" id="logger"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyShopConfig"/>
             <argument type="service" id="LoyaltyEngage\Service\ManagedRewardService"/>
+            <argument type="service" id="LoyaltyEngage\Service\RewardAuthorization"/>
         </service>
 
         <!-- Loyalty Shop Service (storefront widget) -->
@@ -135,6 +146,7 @@
             <argument type="service" id="promotion_individual_code.repository"/>
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\RewardAuthorization"/>
         </service>
 
         <!-- Storefront Controller (loyalty shop widget endpoints) -->
@@ -216,25 +228,21 @@
 
         <!-- Message Handlers -->
         <service id="LoyaltyEngage\Message\Handler\PurchaseMessageHandler">
-            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
-            <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="messenger.message_handler"/>
         </service>
 
         <service id="LoyaltyEngage\Message\Handler\ReturnMessageHandler">
-            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
-            <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="messenger.message_handler"/>
         </service>
 
         <service id="LoyaltyEngage\Message\Handler\FreeProductPurchaseMessageHandler">
-            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
-            <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="messenger.message_handler"/>
         </service>
 
         <service id="LoyaltyEngage\Message\Handler\FreeProductRemoveMessageHandler">
-            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
             <tag name="messenger.message_handler"/>
         </service>
@@ -244,7 +252,7 @@
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="order.repository"/>
             <argument type="service" id="logger"/>
-            <argument type="service" id="messenger.default_bus"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 
@@ -252,21 +260,19 @@
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="order_delivery.repository"/>
             <argument type="service" id="logger"/>
-            <argument type="service" id="messenger.default_bus"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 
         <service id="LoyaltyEngage\Subscriber\FreeProductPurchaseSubscriber">
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
-            <argument type="service" id="messenger.default_bus"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 
         <service id="LoyaltyEngage\Subscriber\FreeProductRemoveSubscriber">
-            <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="logger"/>
-            <argument type="service" id="messenger.default_bus"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 
@@ -275,6 +281,7 @@
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService"/>
             <argument type="service" id="promotion_individual_code.repository"/>
             <argument type="service" id="logger"/>
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 
@@ -331,6 +338,7 @@
             <argument type="service" id="order.repository" />
             <argument type="service" id="LoyaltyEngage\Service\LoyaltyEngageApiService" />
             <argument type="service" id="logger" />
+            <argument type="service" id="LoyaltyEngage\Service\DeliveryOutbox" />
             <tag name="messenger.message_handler"/>
         </service>
     </services>

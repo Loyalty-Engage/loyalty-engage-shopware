@@ -43,8 +43,7 @@ class LoyaltyFreeProductProcessor implements CartProcessorInterface
             if (!$this->isLoyaltyFreeProduct($lineItem)) {
                 continue;
             }
-            if (($lineItem->getPayloadValue('leManagedReward') === true || $this->config->enabled($context->getSalesChannelId()))
-                && !$this->authorization->valid($lineItem, $context)) { continue; }
+            if (!$this->authorization->valid($lineItem, $context)) { continue; }
 
             // Build a zero-price definition using the existing tax rules
             // (tax rules are already set by the standard product processor)

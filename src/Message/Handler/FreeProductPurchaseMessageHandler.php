@@ -3,77 +3,16 @@
 namespace LoyaltyEngage\Message\Handler;
 
 use LoyaltyEngage\Message\FreeProductPurchaseMessage;
-use LoyaltyEngage\Service\LoyaltyEngageApiService;
-use Psr\Log\LoggerInterface;
+use LoyaltyEngage\Service\DeliveryOutbox;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 class FreeProductPurchaseMessageHandler
 {
-    /**
-     * @var LoyaltyEngageApiService
-     */
-    private $loyaltyEngageApiService;
+    public function __construct(private readonly DeliveryOutbox $outbox) {}
 
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    /**
-     * @param LoyaltyEngageApiService $loyaltyEngageApiService
-     * @param LoggerInterface $logger
-     */
-    public function __construct(
-        LoyaltyEngageApiService $loyaltyEngageApiService,
-        LoggerInterface $logger
-    ) {
-        $this->loyaltyEngageApiService = $loyaltyEngageApiService;
-        $this->logger = $logger;
-    }
-
-    /**
-     * @param FreeProductPurchaseMessage $message
-     */
     public function __invoke(FreeProductPurchaseMessage $message): void
     {
-        try {
-            $this->logger->info('Processing free product purchase message', [
-                'email'    => $message->getEmail(),
-                'orderId'  => $message->getOrderId(),
-                'products' => $message->getProducts(),
-            ]);
-
-            $response = $this->loyaltyEngageApiService->placeOrderWithResponse(
-                $message->getEmail(),
-                $message->getOrderId(),
-                $message->getProducts(),
-                $message->getSalesChannelId()
-            );
-
-            $statusCode  = $response['statusCode'] ?? null;
-            $body        = $response['body'] ?? null;
-
-            if ($statusCode === 200) {
-                $this->logger->info('Free product purchase sent successfully', [
-                    'email'   => $message->getEmail(),
-                    'orderId' => $message->getOrderId(),
-                ]);
-            } else {
-                $this->logger->error('Failed to send free product purchase', [
-                    'email'      => $message->getEmail(),
-                    'orderId'    => $message->getOrderId(),
-                    'statusCode' => $statusCode,
-                    'body'       => $body,
-                ]);
-            }
-        } catch (\Throwable $e) {
-            $this->logger->error('Error processing free product purchase message', [
-                'email'   => $message->getEmail(),
-                'orderId' => $message->getOrderId(),
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
-            ]);
-        }
+        $this->outbox->dispatch($message);
     }
 }

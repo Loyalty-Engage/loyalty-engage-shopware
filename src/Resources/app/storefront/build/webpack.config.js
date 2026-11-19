@@ -1,9 +1,9 @@
-const path = require('path');
-
 module.exports = () => {
     return {
-        entry: {
-            loyaltycart: path.resolve(__dirname, '../src/main.js'),
+        // ZIP installs must not depend on another build's shared Webpack module IDs.
+        optimization: {
+            runtimeChunk: false,
+            splitChunks: false,
         }
     };
 };

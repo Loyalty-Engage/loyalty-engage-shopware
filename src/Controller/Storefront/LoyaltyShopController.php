@@ -34,7 +34,7 @@ class LoyaltyShopController extends StorefrontController
      */
     public function addToCart(Request $request, SalesChannelContext $context): JsonResponse
     {
-        if (!$context->getCustomer()) {
+        if (!$context->getCustomer() || $context->getCustomer()->getGuest()) {
             return new JsonResponse(
                 ['success' => false, 'message' => 'User not logged in'],
                 Response::HTTP_UNAUTHORIZED
@@ -72,7 +72,7 @@ class LoyaltyShopController extends StorefrontController
      */
     public function claimDiscount(Request $request, SalesChannelContext $context): JsonResponse
     {
-        if (!$context->getCustomer()) {
+        if (!$context->getCustomer() || $context->getCustomer()->getGuest()) {
             return new JsonResponse(
                 ['success' => false, 'message' => 'User not logged in'],
                 Response::HTTP_UNAUTHORIZED

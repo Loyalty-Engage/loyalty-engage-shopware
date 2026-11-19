@@ -150,7 +150,9 @@ try {
     check(count($orderPromos) === 1 && $orderPromos[0]->getLabel() === 'Bijgewerkte vouchernaam', 'Actual checkout order has the correct voucher name');
     check($orderPromos[0]->getTotalPrice() === -10.0, 'Actual order stores the voucher discount');
     check(!(bool) $db->fetchOne('SELECT id FROM promotion_individual_code WHERE code = ?', [$checkoutCode]), 'Redeemed individual code removed to prevent reuse');
-    check(count(array_filter($requests, static fn ($request) => str_contains($request[1], '/redeem'))) === 1, 'Renamed voucher redeemed exactly once via mocked API');
+    check(count(array_filter($requests, static fn ($request) => str_contains($request[1], '/redeem'))) === 0, 'Voucher remote redemption waits for transaction commit');
+    $deliveryId = hash('sha256', 'voucher_redeem:' . $channel . ':' . $checkoutCode);
+    check($db->fetchOne('SELECT state FROM le_delivery_outbox WHERE id = ?', [$deliveryId]) === 'pending', 'Voucher redemption durably recorded before local code deletion');
     $fresh = $factory->create(uuid(), $channel, ['customerId' => $customer]);
     $freshCart = $carts->getCart($fresh->getToken(), $fresh);
     $freshItem = new Shopware\Core\Checkout\Cart\LineItem\LineItem($product, 'product', $product, 3);

@@ -21,7 +21,6 @@ class LoyaltyShopCartValidator implements CartValidatorInterface
     {
         foreach ($cart->getLineItems()->getFlat() as $item) {
             if ($item->getPayloadValue('loyaltyFreeProduct') === true
-                && ($item->getPayloadValue('leManagedReward') === true || $this->config->enabled($context->getSalesChannelId()))
                 && !$this->authorization->valid($item, $context)) {
                 $errors->add(new GenericCartError('le-authorization-' . $item->getId(), 'loyaltyShopBlocked', ['reason' => 'Deze puntenbeloning heeft geen geldige reservering. Verwijder de beloning en voeg deze opnieuw toe.'], 20, true, false, true));
             }
