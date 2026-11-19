@@ -112,7 +112,8 @@ class SrsDiscountAddedSubscriber implements EventSubscriberInterface
             'Deze kortingscode is ' . $blockReason . '.',
             [],
             GenericCartError::LEVEL_ERROR,
-            false,
+            true,
+            true,
             true
         ));
         $cart->markModified();

@@ -78,7 +78,8 @@ class LoyaltyCartService
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger,
         private readonly LoyaltyShopConfig $shopConfig,
-        private readonly ManagedRewardService $managedRewards
+        private readonly ManagedRewardService $managedRewards,
+        private readonly RewardAuthorization $authorization
     ) {
         $this->cartService = $cartService;
         $this->cartPersister = $cartPersister;
@@ -145,6 +146,7 @@ class LoyaltyCartService
             // Mark as loyalty free product so LoyaltyFreeProductProcessor forces price to €0
             // after Shopware's standard product processor runs
             $lineItem->setPayloadValue('loyaltyFreeProduct', true);
+            $this->authorization->issueLegacy($lineItem, $sku, $context);
 
             // Add to cart
             $cart = $this->cartService->getCart($context->getToken(), $context);

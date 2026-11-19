@@ -37,6 +37,7 @@ class PointsRedemptionController extends AbstractController
     {
         // For Store API: get email from logged-in customer
         if ($context->getCustomer()) {
+            if ($context->getCustomer()->getGuest()) { return null; }
             return $context->getCustomer()->getEmail();
         }
         
@@ -68,7 +69,7 @@ class PointsRedemptionController extends AbstractController
      *   "discountCodes": ["CODE1", "CODE2", ...]
      * }
      */
-    public function redeemPointsApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function redeemPointsApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $points = (int) ($data['points'] ?? 0);
@@ -107,7 +108,7 @@ class PointsRedemptionController extends AbstractController
      *   "message": "Loyalty points discount removed from cart."
      * }
      */
-    public function removePointsDiscountApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function removePointsDiscountApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         // Get email from logged-in customer or URL parameter
         $customerEmail = $this->getCustomerEmail($email, $context);
@@ -144,7 +145,7 @@ class PointsRedemptionController extends AbstractController
      *   "existingDiscount": null
      * }
      */
-    public function getRedemptionInfoApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function getRedemptionInfoApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         // Get email from logged-in customer or URL parameter
         $customerEmail = $this->getCustomerEmail($email, $context);
@@ -182,7 +183,7 @@ class PointsRedemptionController extends AbstractController
      *   "message": "You can redeem 10 points for €10 discount."
      * }
      */
-    public function previewRedemptionApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function previewRedemptionApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $points = (int) ($data['points'] ?? 0);

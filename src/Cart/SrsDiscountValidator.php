@@ -86,7 +86,8 @@ class SrsDiscountValidator implements CartValidatorInterface
                 continue;
             }
 
-            $promotionName = $this->resolvePromotionName($promotionCode, $context);
+            $loyaltyVoucher = false;
+            $promotionName = $this->resolvePromotionName($promotionCode, $context, $loyaltyVoucher);
             if ($promotionName === null) {
                 $this->logger->warning('SrsDiscountValidator: Code not found in Shopware promotions', [
                     'code' => $promotionCode,
@@ -99,7 +100,7 @@ class SrsDiscountValidator implements CartValidatorInterface
                 'promotionName' => $promotionName,
             ]);
 
-            if (!str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
+            if (!$loyaltyVoucher && !str_starts_with($promotionName, self::PROMOTION_NAME_PREFIX)) {
                 $this->logger->warning('SrsDiscountValidator: Skipping non-LoyaltyEngage promotion', [
                     'code'          => $promotionCode,
                     'promotionName' => $promotionName,
@@ -129,14 +130,15 @@ class SrsDiscountValidator implements CartValidatorInterface
                     'Deze kortingscode is ' . $blockReason . '.',
                     [],
                     GenericCartError::LEVEL_ERROR,
-                    false,
+                    true,
+                    true,
                     true
                 ));
             }
         }
     }
 
-    private function resolvePromotionName(string $promotionCode, SalesChannelContext $context): ?string
+    private function resolvePromotionName(string $promotionCode, SalesChannelContext $context, bool &$loyaltyVoucher): ?string
     {
         $criteria = new Criteria();
         $criteria->addFilter(new EqualsFilter('code', $promotionCode));
@@ -147,7 +149,10 @@ class SrsDiscountValidator implements CartValidatorInterface
         $codeEntity   = $searchResult->first();
 
         if ($codeEntity instanceof Entity) {
-            $promotionName = $this->extractPromotionName($codeEntity->get('promotion'));
+            $promotion = $codeEntity->get('promotion');
+            $fields = $promotion instanceof Entity ? ($promotion->get('customFields') ?? []) : ($promotion['customFields'] ?? []);
+            $loyaltyVoucher = !empty($fields['le_voucher_identity']);
+            $promotionName = $this->extractPromotionName($promotion);
             if ($promotionName !== '') {
                 return $promotionName;
             }
@@ -162,6 +167,7 @@ class SrsDiscountValidator implements CartValidatorInterface
         if (!$promotion instanceof Entity) {
             return null;
         }
+        $loyaltyVoucher = !empty(($promotion->get('customFields') ?? [])['le_voucher_identity']);
 
         $translatedName = (string) $promotion->getTranslation('name');
         if ($translatedName !== '') {

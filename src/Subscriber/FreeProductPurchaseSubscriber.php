@@ -7,7 +7,7 @@ use LoyaltyEngage\Service\LoyaltyEngageApiService;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Event\CheckoutOrderPlacedEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
+use LoyaltyEngage\Service\DeliveryOutbox;
 
 /**
  * Triggers the LoyaltyEngage cart/purchase API call when an order is placed.
@@ -21,12 +21,12 @@ class FreeProductPurchaseSubscriber implements EventSubscriberInterface
 {
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private LoggerInterface $logger;
-    private MessageBusInterface $messageBus;
+    private DeliveryOutbox $messageBus;
 
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         LoggerInterface $logger,
-        MessageBusInterface $messageBus
+        DeliveryOutbox $messageBus
     ) {
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->logger                  = $logger;

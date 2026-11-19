@@ -18,6 +18,7 @@ npm-debug.log
 yarn-error.log
 
 # Build artifacts
+/staging-artifacts/
 /src/Resources/app/storefront/dist/
 /src/Resources/app/administration/dist/
 /src/Resources/public/administration/
@@ -26,6 +27,10 @@ yarn-error.log
 /tests/*
 !/tests/srs-voucher-smoke.php
 !/tests/voucher-promotion-smoke.php
+!/tests/tracking-regression.cjs
+!/tests/security-smoke.php
+!/tests/delivery-outbox-integration.php
+!/tests/return-e2e.php
 !/tests/voucher-checkout-integration.php
 !/tests/loyalty-shop-smoke.php
 !/tests/loyalty-shop-integration.php

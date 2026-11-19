@@ -13,20 +13,20 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\System\StateMachine\Event\StateMachineTransitionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
+use LoyaltyEngage\Service\DeliveryOutbox;
 
 class ReturnSubscriber implements EventSubscriberInterface
 {
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private EntityRepository $orderDeliveryRepository;
     private LoggerInterface $logger;
-    private MessageBusInterface $messageBus;
+    private DeliveryOutbox $messageBus;
 
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         EntityRepository $orderDeliveryRepository,
         LoggerInterface $logger,
-        MessageBusInterface $messageBus
+        DeliveryOutbox $messageBus
     ) {
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->orderDeliveryRepository = $orderDeliveryRepository;
@@ -61,6 +61,7 @@ class ReturnSubscriber implements EventSubscriberInterface
             $criteria->addFilter(new EqualsFilter('versionId', Defaults::LIVE_VERSION));
             $criteria->addAssociation('order');
             $criteria->addAssociation('order.lineItems');
+            $criteria->addAssociation('order.deliveries.positions');
             $criteria->addAssociation('order.orderCustomer');
 
             /** @var OrderDeliveryEntity|null $delivery */
@@ -82,6 +83,37 @@ class ReturnSubscriber implements EventSubscriberInterface
 
             $email      = $customer->getEmail();
             $returnDate = (new \DateTime())->format(DATE_ATOM);
+
+            $products = $this->returnedProducts($order, $deliveryId);
+            if (!$products) {
+                $this->logger->warning('LoyaltyEngage: No returned product positions', ['deliveryId' => $deliveryId]);
+                return;
+            }
+            $this->messageBus->dispatch(new ReturnMessage($email, $returnDate, $products, $order->getSalesChannelId(), $deliveryId, $order->getOrderNumber()));
+        } catch (\Throwable $e) {
+            $this->logger->error('LoyaltyEngage: Failed to export returned delivery', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function returnedProducts(OrderEntity $order, string $deliveryId): array
+    {
+            // Assign remainder cents to a stable range of units across split deliveries.
+            $deliveries = $order->getDeliveries()?->getElements() ?? [];
+            ksort($deliveries, SORT_STRING);
+            $offset = $returned = [];
+            foreach ($deliveries as $delivery) {
+                foreach ($delivery->getPositions() ?? [] as $position) {
+                    $id = $position->getOrderLineItemId();
+                    $quantity = $position->getQuantity();
+                    if ($quantity <= 0) { throw new \UnexpectedValueException('Invalid delivery quantity'); }
+                    if ($delivery->getId() === $deliveryId) {
+                        $returned[$id] = ($returned[$id] ?? 0) + $quantity;
+                    } else {
+                        $offset[$id] = ($offset[$id] ?? 0) + $quantity;
+                    }
+                }
+                if ($delivery->getId() === $deliveryId) { break; }
+            }
 
             // ----------------------------------------------------------------
             // Step 1: Collect product line items and calculate totals.
@@ -140,6 +172,7 @@ class ReturnSubscriber implements EventSubscriberInterface
                 $subtotal  = $unitPrice * $quantity;
 
                 $rawProducts[]  = [
+                    'id'        => $lineItem->getId(),
                     'sku'       => $sku,
                     'unitPrice' => $unitPrice,
                     'quantity'  => $quantity,
@@ -150,7 +183,7 @@ class ReturnSubscriber implements EventSubscriberInterface
 
             if (empty($rawProducts)) {
                 $this->logger->error('LoyaltyEngage: No valid product line items found', ['orderId' => $order->getId()]);
-                return;
+                return [];
             }
 
             // ----------------------------------------------------------------
@@ -166,9 +199,7 @@ class ReturnSubscriber implements EventSubscriberInterface
             //     remainingCents -= productDiscount
             //   Last product gets all remainingCents (absorbs rounding remainder)
             //
-            //   Send price = effectiveSubtotal and quantity = 1 to avoid
-            //   rounding loss when effectiveSubtotal is not evenly divisible
-            //   by quantity (e.g. €80 / 6 = €13.333...).
+            //   Split a discounted line into at most two unit prices to retain exact cents.
             // ----------------------------------------------------------------
             $products       = [];
             $discountCents  = (int) round($totalDiscount * 100);
@@ -189,13 +220,15 @@ class ReturnSubscriber implements EventSubscriberInterface
 
                 $subtotalCents          = (int) round($raw['subtotal'] * 100);
                 $effectiveSubtotalCents = max(0, $subtotalCents - $productDiscountCents);
-                $effectiveSubtotal      = round($effectiveSubtotalCents / 100, 2);
-
-                $products[] = [
-                    'sku'      => $raw['sku'],
-                    'price'    => $effectiveSubtotal,
-                    'quantity' => 1,
-                ];
+                $qty = $returned[$raw['id']] ?? 0;
+                if (!$qty) { continue; }
+                $start = $offset[$raw['id']] ?? 0;
+                if ($start + $qty > $raw['quantity']) { throw new \UnexpectedValueException('Delivery quantities exceed ordered quantity'); }
+                $unit = intdiv($effectiveSubtotalCents, $raw['quantity']);
+                $extra = min($qty, max(0, $effectiveSubtotalCents % $raw['quantity'] - $start));
+                foreach ([$unit + 1 => $extra, $unit => $qty - $extra] as $cents => $count) {
+                    if ($count) { $products[] = ['sku' => $raw['sku'], 'price' => $cents / 100, 'quantity' => $count]; }
+                }
             }
 
             if ($this->loyaltyEngageApiService->getLoggerStatus()) {
@@ -207,18 +240,6 @@ class ReturnSubscriber implements EventSubscriberInterface
                 ]);
             }
 
-            $message = new ReturnMessage($email, $returnDate, $products, $order->getSalesChannelId());
-
-            $this->logger->info('LoyaltyEngage: Dispatching return message to queue', [
-                'returnDate' => $returnDate
-            ]);
-
-            $this->messageBus->dispatch($message);
-
-        } catch (\Throwable $e) {
-            $this->logger->error('LoyaltyEngage: Fatal error in onDeliveryReturned()', [
-                'error' => $e->getMessage()
-            ]);
-        }
+            return $products;
     }
 }

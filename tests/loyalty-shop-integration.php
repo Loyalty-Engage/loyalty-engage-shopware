@@ -25,9 +25,11 @@ $db->beginTransaction();
 register_shutdown_function(static function () use ($db): void { if ($db->isTransactionActive()) { $db->rollBack(); } });
 $settings = $container->get(Shopware\Core\System\SystemConfig\SystemConfigService::class);
 $previousSource = $settings->get('LoyaltyEngage.config.shopProductSource', $channelId);
+$previousEnabled = $settings->get('LoyaltyEngage.config.shopEnabled', $channelId);
 $settings->set('LoyaltyEngage.config.shopProductSource', 'shopware', $channelId);
-register_shutdown_function(static function () use ($settings, $previousSource, $channelId): void {
+register_shutdown_function(static function () use ($settings, $previousSource, $previousEnabled, $channelId): void {
     $settings->set('LoyaltyEngage.config.shopProductSource', $previousSource, $channelId);
+    $settings->set('LoyaltyEngage.config.shopEnabled', $previousEnabled, $channelId);
 });
 function dependency(object $object, string $name) { return (new ReflectionProperty($object, $name))->getValue($object); }
 function ensure(bool $value, string $message): void { if (!$value) { throw new RuntimeException($message); } }
@@ -99,4 +101,30 @@ ensure(count($requests) === 2 && $requests[1][0] === 'DELETE' && str_ends_with($
 ensure(!dependency($managed, 'authorization')->valid($reward, $context), 'Removed reservation cannot be replayed');
 $cart = dependency($managed, 'carts')->recalculate($cart, $context);
 ensure($cart->getErrors()->count() > 0, 'Revoked authorization blocks checkout');
-echo "Loyalty shop integration checks passed; external requests were mocked.\n";
+$settings->set('LoyaltyEngage.config.shopEnabled', false, $channelId);
+$legacy = clone dependency($controller, 'loyaltyShopService');
+(new ReflectionProperty($legacy, 'loyaltyEngageApiService'))->setValue($legacy, $api);
+$legacyContext = $factory->create(Shopware\Core\Framework\Uuid\Uuid::randomHex(), $channelId, ['customerId' => $customerId]);
+$result = $legacy->addProductBySku($legacyContext->getCustomer()->getEmail(), $sku, $legacyContext);
+ensure($result['success'], 'Legacy SKU redemption still works when the native shop is disabled');
+$legacyCart = dependency($managed, 'carts')->getCart($legacyContext->getToken(), $legacyContext, false);
+$legacyItem = $legacyCart->getLineItems()->first();
+ensure($legacyItem && dependency($managed, 'authorization')->valid($legacyItem, $legacyContext), 'Legacy redemption has a real, active server proof');
+ensure($legacyItem->getPrice()->getTotalPrice() === 0.0, 'Valid legacy reward still costs zero');
+$changed = clone $legacyItem; $changed->setStackable(true); $changed->setQuantity(2);
+ensure(!dependency($managed, 'authorization')->valid($changed, $legacyContext), 'Changing legacy reward quantity invalidates proof');
+ensure(!dependency($managed, 'authorization')->valid($legacyItem, $context), 'Proof cannot move to a different cart');
+$before = count($requests);
+$lifecycle->remove(new Shopware\Core\Checkout\Cart\Event\BeforeLineItemRemovedEvent($legacyItem, $legacyCart, $legacyContext));
+ensure(count($requests) === $before + 1 && str_ends_with($requests[$before][1], '/cart/remove'), 'Legacy reward releases only its own SKU');
+ensure(!dependency($managed, 'authorization')->valid($legacyItem, $legacyContext), 'Removed legacy proof cannot be replayed');
+$forgedCart = dependency($managed, 'carts')->getCart($anonymous->getToken(), $anonymous);
+$product = dependency($managed, 'catalog')->find($sku, $context);
+ensure($product instanceof Shopware\Core\Content\Product\ProductEntity, 'Forged-item fixture product exists');
+$forged = new Shopware\Core\Checkout\Cart\LineItem\LineItem(Shopware\Core\Framework\Uuid\Uuid::randomHex(), 'product', $product->getId());
+$forged->setPayloadValue('loyaltyFreeProduct', true);
+$forgedCart = dependency($managed, 'carts')->add($forgedCart, $forged, $anonymous);
+ensure($forgedCart->getLineItems()->get($forged->getId())->getPrice()->getTotalPrice() > 0, 'Forged legacy payload cannot zero a product price');
+ensure($forgedCart->getErrors()->count() > 0, 'Forged reward blocks checkout even without the native shop');
+$settings->set('LoyaltyEngage.config.shopEnabled', $previousEnabled, $channelId);
+echo "Loyalty shop integration checks passed, including legacy proof, tampering and removal; external requests were mocked.\n";

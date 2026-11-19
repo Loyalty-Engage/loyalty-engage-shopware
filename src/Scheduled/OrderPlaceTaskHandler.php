@@ -3,6 +3,8 @@
 namespace LoyaltyEngage\Scheduled;
 
 use LoyaltyEngage\Service\LoyaltyEngageApiService;
+use LoyaltyEngage\Service\DeliveryOutbox;
+use LoyaltyEngage\Message\FreeProductPurchaseMessage;
 use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -39,7 +41,8 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
         EntityRepository $scheduledTaskRepository,
         EntityRepository $orderRepository,
         LoyaltyEngageApiService $loyaltyEngageApiService,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        private readonly DeliveryOutbox $outbox
     ) {
         parent::__construct($scheduledTaskRepository, $logger);
         $this->orderRepository = $orderRepository;
@@ -60,6 +63,7 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
      */
     public function run(): void
     {
+        $this->outbox->retryDue();
         $loyaltyOrderRetrieveLimit = $this->loyaltyEngageApiService->getLoyaltyOrderRetrieveLimit();
         $context = Context::createDefaultContext();
 
@@ -94,18 +98,26 @@ class OrderPlaceTaskHandler extends ScheduledTaskHandler
                     continue;
                 }
 
+                $payload = $lineItem->getPayload() ?? [];
+                if (($payload['loyaltyFreeProduct'] ?? false) !== true || empty($payload['productNumber'])) {
+                    continue;
+                }
+
                 $products[] = [
-                    'sku' => $lineItem->getProductId(),
+                    'sku' => $payload['productNumber'],
                     'quantity' => (int) $lineItem->getQuantity()
                 ];
             }
 
             // Place order
-            $response = $this->loyaltyEngageApiService->placeOrder($email, $orderNumber, $products, $order->getSalesChannelId());
+            if ($products === []) {
+                continue;
+            }
+            $response = $this->outbox->dispatch(new FreeProductPurchaseMessage($email, $orderNumber, $products, $order->getSalesChannelId()));
 
             $customFields = $order->getCustomFields() ?? [];
 
-            if ($response && $response == 200) {
+            if ($response) {
                 $customFields['loyalty_order_place'] = true;
             } else {
                 $currentValue = (int) ($customFields['loyalty_order_place_retrieve'] ?? 0);

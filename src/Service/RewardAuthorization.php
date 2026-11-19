@@ -10,6 +10,17 @@ class RewardAuthorization
 {
     public function __construct(private readonly string $secret, private readonly Connection $connection) {}
 
+    public function issueLegacy(LineItem $item, string $sku, SalesChannelContext $context): void
+    {
+        $key = hash('sha256', 'legacy:' . \Shopware\Core\Framework\Uuid\Uuid::randomHex());
+        $this->connection->insert('le_reward_request', [
+            'id' => $key, 'response' => '{}', 'created_at' => date('Y-m-d H:i:s'), 'active' => 1,
+        ]);
+        $item->setPayloadValue('productNumber', $sku);
+        $item->setPayloadValue('leRewardRequestKey', $key);
+        $item->setPayloadValue('leRewardAuthorization', $this->sign($item, $context));
+    }
+
     public function sign(LineItem $item, SalesChannelContext $context): string
     {
         return hash_hmac('sha256', implode('|', [$context->getToken(), $context->getSalesChannelId(), $context->getCustomer()?->getId(), $item->getId(), $item->getReferencedId(), $item->getQuantity(), $item->getPayloadValue('productNumber'), $item->getPayloadValue('leRewardRequestKey')]), $this->secret);

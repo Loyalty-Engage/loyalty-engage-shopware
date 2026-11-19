@@ -100,12 +100,17 @@ class PointsRedemptionService
             return $this->createErrorResponse("Maximum {$maxPoints} points can be redeemed per order.");
         }
 
+        // The legacy SKU represents one whole euro per purchased voucher.
+        $pointsPerEuro = $this->loyaltyEngageApiService->getPointsPerEuro();
+        if ($points <= 0 || $points % $pointsPerEuro !== 0) {
+            return $this->createErrorResponse("Redeem points in multiples of {$pointsPerEuro}.");
+        }
+
         // Get cart and calculate discount limits
         $cart = $this->cartService->getCart($context->getToken(), $context);
         $cartTotal = $cart->getPrice()->getTotalPrice();
 
         // Calculate points to euro conversion
-        $pointsPerEuro = $this->loyaltyEngageApiService->getPointsPerEuro();
         $discountAmount = $points / $pointsPerEuro;
 
         // Check maximum discount percentage

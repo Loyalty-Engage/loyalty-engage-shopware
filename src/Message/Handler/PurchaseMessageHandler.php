@@ -3,67 +3,16 @@
 namespace LoyaltyEngage\Message\Handler;
 
 use LoyaltyEngage\Message\PurchaseMessage;
-use LoyaltyEngage\Service\LoyaltyEngageApiService;
-use Psr\Log\LoggerInterface;
+use LoyaltyEngage\Service\DeliveryOutbox;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 class PurchaseMessageHandler
 {
-    /**
-     * @var LoyaltyEngageApiService
-     */
-    private $loyaltyEngageApiService;
+    public function __construct(private readonly DeliveryOutbox $outbox) {}
 
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    /**
-     * @param LoyaltyEngageApiService $loyaltyEngageApiService
-     * @param LoggerInterface $logger
-     */
-    public function __construct(
-        LoyaltyEngageApiService $loyaltyEngageApiService,
-        LoggerInterface $logger
-    ) {
-        $this->loyaltyEngageApiService = $loyaltyEngageApiService;
-        $this->logger = $logger;
-    }
-
-    /**
-     * @param PurchaseMessage $message
-     */
     public function __invoke(PurchaseMessage $message): void
     {
-        try {
-            $this->logger->info('Processing purchase message', [
-                'email' => $message->getEmail(),
-                'orderId' => $message->getOrderId()
-            ]);
-
-            $response = $this->loyaltyEngageApiService->sendEvent($message->toArray(), $message->getSalesChannelId());
-
-            if ($response === 200) {
-                $this->logger->info('Purchase event sent successfully', [
-                    'email' => $message->getEmail(),
-                    'orderId' => $message->getOrderId()
-                ]);
-            } else {
-                $this->logger->error('Failed to send purchase event', [
-                    'email' => $message->getEmail(),
-                    'orderId' => $message->getOrderId(),
-                    'response' => $response
-                ]);
-            }
-        } catch (\Throwable $e) {
-            $this->logger->error('Error processing purchase message', [
-                'email' => $message->getEmail(),
-                'orderId' => $message->getOrderId(),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
+        $this->outbox->dispatch($message);
     }
 }

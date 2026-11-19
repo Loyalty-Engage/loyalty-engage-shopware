@@ -39,6 +39,7 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     {
         // For Store API: get email from logged-in customer
         if ($context->getCustomer()) {
+            if ($context->getCustomer()->getGuest()) { return null; }
             return $context->getCustomer()->getEmail();
         }
         
@@ -54,7 +55,7 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
      * Add a product to the cart using loyalty points
      * Works for both Store API (no email param) and Admin API (with email param)
      */
-    public function addProductApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function addProductApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
@@ -84,7 +85,7 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     /**
      * Remove a product from the cart
      */
-    public function removeProductApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function removeProductApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';
@@ -113,7 +114,7 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     /**
      * Remove all products from the cart
      */
-    public function removeAllProductsApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function removeAllProductsApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         $customerEmail = $this->getCustomerEmail($email, $context);
         
@@ -132,7 +133,7 @@ class LoyaltyCartController extends AbstractController implements LoyaltyCartApi
     /**
      * Claim a discount after adding a product to the loyalty cart
      */
-    public function claimDiscountApi(?string $email = null, Request $request, SalesChannelContext $context): JsonResponse
+    public function claimDiscountApi(Request $request, SalesChannelContext $context, ?string $email = null): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $productId = $data['productId'] ?? '';

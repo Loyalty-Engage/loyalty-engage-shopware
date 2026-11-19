@@ -12,20 +12,20 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\System\StateMachine\Event\StateMachineTransitionEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
+use LoyaltyEngage\Service\DeliveryOutbox;
 
 class PurchaseSubscriber implements EventSubscriberInterface
 {
     private LoyaltyEngageApiService $loyaltyEngageApiService;
     private EntityRepository $orderRepository;
     private LoggerInterface $logger;
-    private MessageBusInterface $messageBus;
+    private DeliveryOutbox $messageBus;
 
     public function __construct(
         LoyaltyEngageApiService $loyaltyEngageApiService,
         EntityRepository $orderRepository,
         LoggerInterface $logger,
-        MessageBusInterface $messageBus
+        DeliveryOutbox $messageBus
     ) {
         $this->loyaltyEngageApiService = $loyaltyEngageApiService;
         $this->orderRepository = $orderRepository;

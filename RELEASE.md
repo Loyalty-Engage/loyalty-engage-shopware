@@ -172,3 +172,11 @@ See the [commit history](https://github.com/Loyalty-Engage/loyalty-engage-shopwa
 For questions about the release process:
 - Open an issue on GitHub
 - Contact: support@loyaltyengage.tech
+# 2.7.2 staging package check
+
+When packaging Shopware 6.7, copy `tools/release/legacy-loyaltycart.js` into the
+ZIP as `LoyaltyEngage/src/Resources/app/storefront/dist/storefront/js/loyalty-engage/loyaltycart.js`.
+The 2.7.1 ZIP shipped executable tracking code at that path. Test by overlaying
+the candidate onto the original release ZIP, not just by testing a clean extract.
+Run the tracking regression on the overlay, recompile the theme, purge cached
+pages and CDN assets, and inspect the actual active theme referenced by HTML.
